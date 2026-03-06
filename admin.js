@@ -127,6 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
         handleUpload(this, 'setting-profile_img_url');
     });
 
+    const galleryUploadBtn = document.getElementById('gallery-upload');
+    if (galleryUploadBtn) {
+        galleryUploadBtn.addEventListener('change', function () {
+            handleUpload(this, 'gallery-image-url');
+        });
+    }
+
     // Handle Settings Form
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
