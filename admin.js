@@ -157,7 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
             seo_image: document.getElementById('setting-seo_image').value,
             animated_background: document.getElementById('setting-animated_background').value,
             custom_css: document.getElementById('setting-custom_css').value,
-            custom_js: document.getElementById('setting-custom_js').value
+            custom_js: document.getElementById('setting-custom_js').value,
+            vcard_active: document.getElementById('setting-vcard_active').value,
+            vcard_first_name: document.getElementById('setting-vcard_first_name').value,
+            vcard_last_name: document.getElementById('setting-vcard_last_name').value,
+            vcard_email: document.getElementById('setting-vcard_email').value,
+            vcard_phone: document.getElementById('setting-vcard_phone').value,
+            vcard_instagram: document.getElementById('setting-vcard_instagram').value
         };
 
         try {
@@ -206,6 +212,7 @@ function showDashboard() {
     loadSubscribers();
     loadSettings();
     loadGallery();
+    loadChart();
 }
 
 let allLinksData = [];
@@ -426,6 +433,12 @@ async function loadSettings() {
         if (settings.animated_background) document.getElementById('setting-animated_background').value = settings.animated_background;
         if (settings.custom_css) document.getElementById('setting-custom_css').value = settings.custom_css;
         if (settings.custom_js) document.getElementById('setting-custom_js').value = settings.custom_js;
+        if (settings.vcard_active) document.getElementById('setting-vcard_active').value = settings.vcard_active;
+        if (settings.vcard_first_name) document.getElementById('setting-vcard_first_name').value = settings.vcard_first_name;
+        if (settings.vcard_last_name) document.getElementById('setting-vcard_last_name').value = settings.vcard_last_name;
+        if (settings.vcard_email) document.getElementById('setting-vcard_email').value = settings.vcard_email;
+        if (settings.vcard_phone) document.getElementById('setting-vcard_phone').value = settings.vcard_phone;
+        if (settings.vcard_instagram) document.getElementById('setting-vcard_instagram').value = settings.vcard_instagram;
 
     } catch (err) {
         console.error('Failed to load settings:', err);
@@ -601,3 +614,52 @@ window.deleteGalleryImage = async function (id) {
         } catch (err) { }
     }
 };
+
+let dailyClicksChart;
+async function loadChart() {
+    try {
+        const res = await fetch('/api/admin/analytics/daily');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.length === 0) return;
+
+        const labels = data.map(d => d.date);
+        const clicks = data.map(d => d.clicks);
+
+        const ctx = document.getElementById('daily-clicks-chart').getContext('2d');
+        if (dailyClicksChart) dailyClicksChart.destroy();
+
+        dailyClicksChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Daily Clicks',
+                    data: clicks,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.2)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#4361ee',
+                    pointRadius: 5,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    } catch (err) { }
+}

@@ -140,6 +140,16 @@ app.post('/api/click/:id', async (req, res) => {
         } else {
             await dbRun('INSERT INTO analytics (link_id, click_count, last_clicked) VALUES (?, 1, CURRENT_TIMESTAMP)', [linkId]);
         }
+
+        // Add to daily analytics
+        const today = new Date().toISOString().split('T')[0];
+        const daily = await dbGet('SELECT * FROM daily_analytics WHERE date = ? AND link_id = ?', [today, linkId]);
+        if (daily) {
+            await dbRun('UPDATE daily_analytics SET clicks = clicks + 1 WHERE id = ?', [daily.id]);
+        } else {
+            await dbRun('INSERT INTO daily_analytics (date, link_id, clicks) VALUES (?, ?, 1)', [today, linkId]);
+        }
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to record click' });
@@ -211,6 +221,38 @@ app.post('/api/subscribe', async (req, res) => {
             console.error(err);
             res.status(500).json({ error: 'Failed to subscribe' });
         }
+    }
+});
+
+// Download vCard
+app.get('/api/vcard', async (req, res) => {
+    try {
+        const settingsRows = await dbAll('SELECT * FROM settings');
+        const settings = {};
+        settingsRows.forEach(r => settings[r.key] = r.value);
+
+        if (settings.vcard_active !== 'true') return res.status(404).send('vCard disabled');
+
+        const firstName = settings.vcard_first_name || '';
+        const lastName = settings.vcard_last_name || '';
+        const email = settings.vcard_email || '';
+        const phone = settings.vcard_phone || '';
+        const instagram = settings.vcard_instagram || '';
+
+        const vcardData = `BEGIN:VCARD
+VERSION:3.0
+N:${lastName};${firstName};;;
+FN:${firstName} ${lastName}
+EMAIL:${email}
+TEL:${phone}
+URL:${instagram}
+END:VCARD`;
+
+        res.setHeader('Content-Type', 'text/vcard');
+        res.setHeader('Content-Disposition', `attachment; filename="contact.vcf"`);
+        res.send(vcardData);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed' });
     }
 });
 
@@ -491,11 +533,11 @@ app.post('/api/admin/upload', requireAuth, upload.single('file'), (req, res) => 
 app.get('/api/admin/analytics/daily', requireAuth, async (req, res) => {
     try {
         const query = `
-            SELECT date(last_clicked) as date, SUM(click_count) as clicks
-            FROM analytics
-            WHERE last_clicked IS NOT NULL AND last_clicked >= date('now', '-30 days')
-            GROUP BY date(last_clicked)
-            ORDER BY date(last_clicked) ASC
+            SELECT date, SUM(clicks) as clicks
+            FROM daily_analytics
+            WHERE date >= date('now', '-30 days')
+            GROUP BY date
+            ORDER BY date ASC
             `;
         const analytics = await dbAll(query);
         res.json(analytics);

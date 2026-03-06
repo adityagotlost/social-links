@@ -44,13 +44,22 @@ function createTables() {
             display_order INTEGER NOT NULL DEFAULT 0
         )`);
 
-        // Analytics Table
+        // Analytics Table (Total Clicks)
         db.run(`CREATE TABLE IF NOT EXISTS analytics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             link_id INTEGER NOT NULL,
             click_count INTEGER NOT NULL DEFAULT 0,
             last_clicked DATETIME,
             FOREIGN KEY (link_id) REFERENCES links (id) ON DELETE CASCADE
+        )`);
+
+        // Daily Analytics Table
+        db.run(`CREATE TABLE IF NOT EXISTS daily_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            link_id INTEGER NOT NULL,
+            clicks INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(date, link_id)
         )`);
 
         // Messages Table
@@ -102,7 +111,13 @@ function createTables() {
                     ['seo_image', ''],
                     ['animated_background', 'none'],
                     ['custom_css', ''],
-                    ['custom_js', '']
+                    ['custom_js', ''],
+                    ['vcard_active', 'true'],
+                    ['vcard_first_name', 'Aditya'],
+                    ['vcard_last_name', 'Anand'],
+                    ['vcard_email', 'adityaanand3316@gmail.com'],
+                    ['vcard_phone', '9304519320'],
+                    ['vcard_instagram', 'https://instagram.com/kage_adi']
                 ];
                 // Insert new settings if they don't exist
                 db.all("SELECT key FROM settings", (err, rows) => {

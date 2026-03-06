@@ -96,6 +96,12 @@ async function loadSettings() {
         // Save settings globally for social footer rendering
         window.appSettings = settings;
 
+        // vCard
+        const vcardBtn = document.getElementById('vcard-btn');
+        if (vcardBtn && settings.vcard_active === 'true') {
+            vcardBtn.style.display = 'inline-block';
+        }
+
     } catch (e) {
         console.error("Failed to load settings", e);
     }
