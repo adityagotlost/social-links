@@ -131,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
             skills: document.getElementById('setting-skills').value,
             status: document.getElementById('setting-status').value,
             show_social_footer: document.getElementById('setting-show_social_footer').value,
-            github_username: document.getElementById('setting-github_username').value,
             font_family: document.getElementById('setting-font_family').value,
             newsletter_active: document.getElementById('setting-newsletter_active').value,
             newsletter_title: document.getElementById('setting-newsletter_title').value,
@@ -381,7 +380,6 @@ async function loadSettings() {
         if (settings.skills) document.getElementById('setting-skills').value = settings.skills;
         if (settings.status) document.getElementById('setting-status').value = settings.status;
         if (settings.show_social_footer) document.getElementById('setting-show_social_footer').value = settings.show_social_footer;
-        if (settings.github_username) document.getElementById('setting-github_username').value = settings.github_username;
         if (settings.font_family) document.getElementById('setting-font_family').value = settings.font_family;
         if (settings.newsletter_active) document.getElementById('setting-newsletter_active').value = settings.newsletter_active;
         if (settings.newsletter_title) document.getElementById('setting-newsletter_title').value = settings.newsletter_title;

@@ -56,14 +56,6 @@ async function loadSettings() {
             badge.style.display = 'inline-flex';
         }
 
-        // GitHub Stats
-        if (settings.github_username) {
-            const widget = document.getElementById('github-widget');
-            const img = document.getElementById('github-stats-img');
-            img.src = `https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(settings.github_username)}&show_icons=true&theme=radical&hide_border=true&bg_color=00000000&text_color=ffffff&title_color=ff6eff&icon_color=00eeff`;
-            widget.style.display = 'block';
-        }
-
         // Tip Jar
         const tipJarContainer = document.getElementById('tip-jar-container');
         if (tipJarContainer && settings.tip_jar_active === 'true' && settings.tip_jar_url) {
