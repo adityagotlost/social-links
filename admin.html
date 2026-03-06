@@ -42,6 +42,7 @@
             <button class="tab-btn active" data-target="links-tab">Links</button>
             <button class="tab-btn" data-target="analytics-tab">Analytics</button>
             <button class="tab-btn" data-target="messages-tab">Messages</button>
+            <button class="tab-btn" data-target="subscribers-tab">Subscribers</button>
             <button class="tab-btn" data-target="settings-tab">Settings</button>
         </div>
 
@@ -96,6 +97,25 @@
             </div>
         </div>
 
+        <!-- Subscribers -->
+        <div id="subscribers-tab" class="tab-content">
+            <h2>Newsletter Subscribers</h2>
+            <div class="table-container">
+                <table id="subscribers-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Subscribed On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subscribers-tbody">
+                        <!-- Subscribers loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Settings -->
         <div id="settings-tab" class="tab-content">
             <h2>Global Settings & SEO</h2>
@@ -113,6 +133,18 @@
                         <option value="minimal-white">Minimal White</option>
                     </select>
                 </div>
+                <!-- Fonts -->
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select id="setting-font_family">
+                        <option value="Inter">Inter (Sans Serif)</option>
+                        <option value="Roboto">Roboto (Sans Serif)</option>
+                        <option value="Outfit">Outfit (Modern Sans)</option>
+                        <option value="Playfair Display">Playfair Display (Serif)</option>
+                        <option value="Space Mono">Space Mono (Monospace)</option>
+                        <option value="Caveat">Caveat (Handwriting)</option>
+                    </select>
+                </div>
                 <!-- Existing Settings -->
                 <div class="form-group"><label>Profile Name</label><input type="text" id="setting-profile_name"></div>
                 <div class="form-group"><label>Profile Image URL</label><input type="text" id="setting-profile_img_url"></div>
@@ -128,6 +160,39 @@
                         <option value="false">No</option>
                     </select>
                 </div>
+                
+                <!-- Newsletter Setup -->
+                <h3 style="margin-top: 20px;">📧 Newsletter Capture</h3>
+                <div class="form-group row-group">
+                    <label>Enable Newsletter Form</label>
+                    <select id="setting-newsletter_active">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Newsletter Form Title</label>
+                    <input type="text" id="setting-newsletter_title" placeholder="e.g. Subscribe to my Newsletter">
+                </div>
+
+                <!-- Tip Jar Setup -->
+                <h3 style="margin-top: 20px;">☕ Tip Jar / Donations</h3>
+                <div class="form-group row-group">
+                    <label>Enable Tip Jar Button</label>
+                    <select id="setting-tip_jar_active">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tip Button Text</label>
+                    <input type="text" id="setting-tip_jar_text" placeholder="e.g. Buy me a coffee">
+                </div>
+                <div class="form-group">
+                    <label>Tip URL (PayPal, BuyMeACoffee, Stripe)</label>
+                    <input type="url" id="setting-tip_jar_url" placeholder="https://buymeacoffee.com/yourname">
+                </div>
+
                 <!-- SEO Settings -->
                 <h3>SEO & Social Sharing Preview</h3>
                 <div class="form-group">

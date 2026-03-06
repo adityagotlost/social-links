@@ -132,6 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
             status: document.getElementById('setting-status').value,
             show_social_footer: document.getElementById('setting-show_social_footer').value,
             github_username: document.getElementById('setting-github_username').value,
+            font_family: document.getElementById('setting-font_family').value,
+            newsletter_active: document.getElementById('setting-newsletter_active').value,
+            newsletter_title: document.getElementById('setting-newsletter_title').value,
+            tip_jar_active: document.getElementById('setting-tip_jar_active').value,
+            tip_jar_text: document.getElementById('setting-tip_jar_text').value,
+            tip_jar_url: document.getElementById('setting-tip_jar_url').value,
             seo_title: document.getElementById('setting-seo_title').value,
             seo_description: document.getElementById('setting-seo_description').value,
             seo_image: document.getElementById('setting-seo_image').value
@@ -180,6 +186,7 @@ function showDashboard() {
     document.getElementById('dashboard-container').style.display = 'block';
     loadLinksAndAnalytics().then(() => initSortable());
     loadMessages();
+    loadSubscribers();
     loadSettings();
 }
 
@@ -308,6 +315,52 @@ async function loadMessages() {
     }
 }
 
+async function loadSubscribers() {
+    try {
+        const res = await fetch('/api/admin/subscribers');
+        if (!res.ok) return;
+        const subscribers = await res.json();
+
+        const tbody = document.getElementById('subscribers-tbody');
+        tbody.innerHTML = '';
+
+        if (subscribers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No subscribers yet.</td></tr>';
+            return;
+        }
+
+        subscribers.forEach(sub => {
+            const date = new Date(sub.created_at).toLocaleString();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${sub.email}</strong></td>
+                <td>${date}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriber(${sub.id})">Remove</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error('Failed to load subscribers:', err);
+    }
+}
+
+window.deleteSubscriber = async function (id) {
+    if (confirm('Are you sure you want to remove this subscriber?')) {
+        try {
+            const res = await fetch(`/api/admin/subscribers/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadSubscribers();
+            } else {
+                alert('Failed to delete subscriber.');
+            }
+        } catch (err) {
+            alert('Network error while deleting subscriber.');
+        }
+    }
+};
+
 async function loadSettings() {
     try {
         const res = await fetch('/api/settings');
@@ -318,7 +371,7 @@ async function loadSettings() {
             document.getElementById('setting-theme').value = settings.theme;
             document.body.className = ''; // reset classes
             if (settings.theme !== 'default') {
-                document.body.classList.add(`theme-${settings.theme}`);
+                document.body.classList.add(`theme - ${settings.theme}`);
             }
         }
         if (settings.profile_name) document.getElementById('setting-profile_name').value = settings.profile_name;
@@ -329,6 +382,12 @@ async function loadSettings() {
         if (settings.status) document.getElementById('setting-status').value = settings.status;
         if (settings.show_social_footer) document.getElementById('setting-show_social_footer').value = settings.show_social_footer;
         if (settings.github_username) document.getElementById('setting-github_username').value = settings.github_username;
+        if (settings.font_family) document.getElementById('setting-font_family').value = settings.font_family;
+        if (settings.newsletter_active) document.getElementById('setting-newsletter_active').value = settings.newsletter_active;
+        if (settings.newsletter_title) document.getElementById('setting-newsletter_title').value = settings.newsletter_title;
+        if (settings.tip_jar_active) document.getElementById('setting-tip_jar_active').value = settings.tip_jar_active;
+        if (settings.tip_jar_text) document.getElementById('setting-tip_jar_text').value = settings.tip_jar_text;
+        if (settings.tip_jar_url) document.getElementById('setting-tip_jar_url').value = settings.tip_jar_url;
         if (settings.seo_title) document.getElementById('setting-seo_title').value = settings.seo_title;
         if (settings.seo_description) document.getElementById('setting-seo_description').value = settings.seo_description;
         if (settings.seo_image) document.getElementById('setting-seo_image').value = settings.seo_image;
@@ -363,7 +422,7 @@ window.editLink = function (link) {
 window.deleteLink = async function (id) {
     if (confirm('Are you sure you want to delete this link?')) {
         try {
-            const res = await fetch(`/api/admin/links/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/ api / admin / links / ${id}`, { method: 'DELETE' });
             if (res.ok) {
                 loadLinksAndAnalytics().then(() => initSortable());
             } else {

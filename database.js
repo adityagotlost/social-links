@@ -53,6 +53,13 @@ function createTables() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        // Subscribers Table
+        db.run(`CREATE TABLE IF NOT EXISTS subscribers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
         // Users Table (Admin)
         db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +82,12 @@ function createTables() {
                     ['primary_color', '#4361ee'],
                     ['card_bg', 'rgba(255, 255, 255, 0.03)'],
                     ['theme', 'default'],
+                    ['font_family', 'Inter'],
+                    ['newsletter_active', 'false'],
+                    ['newsletter_title', 'Subscribe to my Newsletter'],
+                    ['tip_jar_active', 'false'],
+                    ['tip_jar_url', ''],
+                    ['tip_jar_text', 'Buy me a coffee'],
                     ['seo_title', 'My Social Links'],
                     ['seo_description', 'Welcome to my little corner of the internet!'],
                     ['seo_image', '']

@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSettings();
     loadLinks();
     setupContactForm();
+    setupNewsletterForm();
     setupQRCode();
     setupThemeToggle();
     countVisit();
@@ -18,6 +19,11 @@ async function loadSettings() {
         // Apply Theme
         if (settings.theme && settings.theme !== 'default') {
             document.body.classList.add(`theme-${settings.theme}`);
+        }
+
+        // Apply Font Family
+        if (settings.font_family) {
+            document.documentElement.style.setProperty('--font-family', `"${settings.font_family}", sans-serif`);
         }
 
         // Profile Details
@@ -56,6 +62,23 @@ async function loadSettings() {
             const img = document.getElementById('github-stats-img');
             img.src = `https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(settings.github_username)}&show_icons=true&theme=radical&hide_border=true&bg_color=00000000&text_color=ffffff&title_color=ff6eff&icon_color=00eeff`;
             widget.style.display = 'block';
+        }
+
+        // Tip Jar
+        const tipJarContainer = document.getElementById('tip-jar-container');
+        if (tipJarContainer && settings.tip_jar_active === 'true' && settings.tip_jar_url) {
+            document.getElementById('tip-jar-text').textContent = settings.tip_jar_text || 'Buy me a coffee';
+            document.getElementById('tip-jar-link').href = settings.tip_jar_url;
+            tipJarContainer.style.display = 'block';
+        }
+
+        // Newsletter
+        const newsletterSection = document.getElementById('newsletter-section');
+        if (newsletterSection && settings.newsletter_active === 'true') {
+            if (settings.newsletter_title) {
+                document.getElementById('newsletter-title').textContent = settings.newsletter_title;
+            }
+            newsletterSection.style.display = 'block';
         }
 
         // Save settings globally for social footer rendering
@@ -325,6 +348,47 @@ function setupContactForm() {
 
         btn.disabled = false;
         btn.innerHTML = '<span class="btn-text">Send Message</span> <i class="fa-solid fa-paper-plane"></i>';
+
+        setTimeout(() => { responseDiv.innerHTML = ''; }, 5000);
+    });
+}
+
+function setupNewsletterForm() {
+    const form = document.getElementById('newsletter-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn = document.getElementById('newsletter-submit');
+        const responseDiv = document.getElementById('newsletter-response');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-text">Wait...</span> <i class="fa-solid fa-spinner fa-spin"></i>';
+
+        const email = document.getElementById('newsletter-email').value;
+
+        try {
+            const res = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                responseDiv.innerHTML = `<span style="color: #4CAF50;"><i class="fa-solid fa-check-circle"></i> ${data.message}</span>`;
+                form.reset();
+            } else {
+                responseDiv.innerHTML = `<span style="color: #F44336;"><i class="fa-solid fa-circle-exclamation"></i> ${data.error || 'Failed to subscribe.'}</span>`;
+            }
+        } catch (err) {
+            responseDiv.innerHTML = `<span style="color: #F44336;"><i class="fa-solid fa-circle-exclamation"></i> Network error occurred.</span>`;
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-text">Subscribe</span>';
 
         setTimeout(() => { responseDiv.innerHTML = ''; }, 5000);
     });

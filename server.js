@@ -194,6 +194,26 @@ app.post('/api/contact', async (req, res) => {
     }
 });
 
+// Subscribe to newsletter
+app.post('/api/subscribe', async (req, res) => {
+    const { email } = req.body;
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({ error: 'Valid email is required' });
+    }
+
+    try {
+        await dbRun('INSERT INTO subscribers (email) VALUES (?)', [email]);
+        res.json({ success: true, message: 'Successfully subscribed!' });
+    } catch (err) {
+        if (err.message && err.message.includes('UNIQUE constraint failed')) {
+            res.status(400).json({ error: 'This email is already subscribed' });
+        } else {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to subscribe' });
+        }
+    }
+});
+
 
 // ===== ADMIN API ENDPOINTS (PROTECTED) =====
 
@@ -358,6 +378,26 @@ app.get('/api/admin/messages', requireAuth, async (req, res) => {
         res.json(messages);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+// Get all subscribers
+app.get('/api/admin/subscribers', requireAuth, async (req, res) => {
+    try {
+        const subscribers = await dbAll('SELECT * FROM subscribers ORDER BY created_at DESC');
+        res.json(subscribers);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch subscribers' });
+    }
+});
+
+// Delete a subscriber
+app.delete('/api/admin/subscribers/:id', requireAuth, async (req, res) => {
+    try {
+        await dbRun('DELETE FROM subscribers WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete subscriber' });
     }
 });
 
