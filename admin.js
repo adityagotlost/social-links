@@ -656,11 +656,21 @@ async function loadChart() {
         const res = await fetch('/api/admin/analytics/daily');
         if (!res.ok) return;
         const data = await res.json();
+        let labels = [];
+        let clicks = [];
 
-        if (data.length === 0) return;
-
-        const labels = data.map(d => d.date);
-        const clicks = data.map(d => d.clicks);
+        if (data.length === 0) {
+            // No data yet: generate the last 7 days with 0 clicks so the chart isn't empty
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toISOString().split('T')[0]);
+                clicks.push(0);
+            }
+        } else {
+            labels = data.map(d => d.date);
+            clicks = data.map(d => d.clicks);
+        }
 
         const ctx = document.getElementById('daily-clicks-chart').getContext('2d');
         if (dailyClicksChart) dailyClicksChart.destroy();
