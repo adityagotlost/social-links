@@ -371,7 +371,7 @@ async function loadSettings() {
             document.getElementById('setting-theme').value = settings.theme;
             document.body.className = ''; // reset classes
             if (settings.theme !== 'default') {
-                document.body.classList.add(`theme - ${settings.theme}`);
+                document.body.classList.add(`theme-${settings.theme}`);
             }
         }
         if (settings.profile_name) document.getElementById('setting-profile_name').value = settings.profile_name;
@@ -422,7 +422,7 @@ window.editLink = function (link) {
 window.deleteLink = async function (id) {
     if (confirm('Are you sure you want to delete this link?')) {
         try {
-            const res = await fetch(`/ api / admin / links / ${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/links/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 loadLinksAndAnalytics().then(() => initSortable());
             } else {
