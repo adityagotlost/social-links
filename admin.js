@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // If embed type, use the url as embed_url
         let finalUrl = url;
         let finalEmbed = null;
-        if (link_type === 'embed' || link_type === 'spotify-song' || link_type === 'spotify-playlist') {
+        if (link_type === 'embed' || link_type === 'spotify') {
             finalEmbed = url;
             finalUrl = '#'; // Placeholder
         }
@@ -126,6 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
             theme: document.getElementById('setting-theme').value,
             profile_name: document.getElementById('setting-profile_name').value,
             profile_img_url: document.getElementById('setting-profile_img_url').value,
+            bio: document.getElementById('setting-bio').value,
+            taglines: document.getElementById('setting-taglines').value,
+            skills: document.getElementById('setting-skills').value,
+            status: document.getElementById('setting-status').value,
+            show_social_footer: document.getElementById('setting-show_social_footer').value,
             github_username: document.getElementById('setting-github_username').value,
             seo_title: document.getElementById('setting-seo_title').value,
             seo_description: document.getElementById('setting-seo_description').value,
@@ -318,6 +323,11 @@ async function loadSettings() {
         }
         if (settings.profile_name) document.getElementById('setting-profile_name').value = settings.profile_name;
         if (settings.profile_img_url) document.getElementById('setting-profile_img_url').value = settings.profile_img_url;
+        if (settings.bio) document.getElementById('setting-bio').value = settings.bio;
+        if (settings.taglines) document.getElementById('setting-taglines').value = settings.taglines;
+        if (settings.skills) document.getElementById('setting-skills').value = settings.skills;
+        if (settings.status) document.getElementById('setting-status').value = settings.status;
+        if (settings.show_social_footer) document.getElementById('setting-show_social_footer').value = settings.show_social_footer;
         if (settings.github_username) document.getElementById('setting-github_username').value = settings.github_username;
         if (settings.seo_title) document.getElementById('setting-seo_title').value = settings.seo_title;
         if (settings.seo_description) document.getElementById('setting-seo_description').value = settings.seo_description;
@@ -389,9 +399,9 @@ document.getElementById('link-type').addEventListener('change', (e) => {
     const urlLabel = document.querySelector('label[for="link-url"]') || document.getElementById('link-url').previousElementSibling;
     const hint = document.getElementById('url-hint');
 
-    if (type === 'spotify-song' || type === 'spotify-playlist') {
+    if (type === 'spotify') {
         urlLabel.textContent = 'Spotify URL';
-        hint.textContent = "Paste standard Spotify link (e.g. open.spotify.com/track/...)";
+        hint.textContent = "Paste standard Spotify link (e.g. open.spotify.com/track/... or open.spotify.com/playlist/...)";
     } else if (type === 'embed') {
         urlLabel.textContent = 'Embed URL (Youtube/etc.)';
         hint.textContent = "Paste iframe src link (e.g. youtube.com/embed/...)";

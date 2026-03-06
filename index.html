@@ -19,17 +19,33 @@
             <div class="avatar-wrapper">
                 <img src="https://ui-avatars.com/api/?name=User&background=random&size=150" alt="Profile Picture" id="profile-img">
             </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; position: relative;">
                 <h1 id="profile-name">@adityagotlost</h1>
+                <div id="status-badge" class="status-badge" style="display: none;">
+                    <span class="status-dot"></span>
+                    <span id="status-text" class="status-text"></span>
+                </div>
                 <button id="qr-btn" class="qr-btn" title="Show QR Code"><i class="fa-solid fa-qrcode"></i></button>
             </div>
-            <p id="profile-bio">Welcome to my little corner of the internet. Let's connect!</p>
+            <p id="profile-bio"></p>
+            <div class="typing-container">
+                <span id="typing-tagline" class="typing-tagline"></span>
+                <span class="typing-cursor">|</span>
+            </div>
+            <div id="skills-container" class="skills-container"></div>
         </header>
+
+        <button id="theme-toggle" class="theme-toggle" title="Toggle Light/Dark Mode">
+            <i class="fa-solid fa-moon"></i>
+        </button>
 
         <div id="links-container" class="links-section">
             <!-- Links will be loaded here dynamically from the backend -->
             <div style="text-align: center; color: white;">Loading links...</div>
         </div>
+
+        <!-- Social Icons Footer -->
+        <footer id="social-footer" class="social-footer"></footer>
 
         <!-- Spotify Now Playing Widget -->
         <div id="spotify-widget" style="display:none;" class="spotify-widget">

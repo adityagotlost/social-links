@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLinks();
     setupContactForm();
     setupQRCode();
+    setupThemeToggle();
     countVisit();
     pollSpotify();
     setInterval(pollSpotify, 30000);
@@ -19,6 +20,36 @@ async function loadSettings() {
             document.body.classList.add(`theme-${settings.theme}`);
         }
 
+        // Profile Details
+        if (settings.profile_name) document.getElementById('profile-name').textContent = settings.profile_name;
+        if (settings.profile_img_url) document.getElementById('profile-img').src = settings.profile_img_url;
+
+        // Bio & Typwriter Taglines
+        if (settings.bio) document.getElementById('profile-bio').textContent = settings.bio;
+        if (settings.taglines) {
+            const taglineArray = settings.taglines.split(',').map(s => s.trim());
+            startTypewriter(taglineArray);
+        }
+
+        // Skills
+        if (settings.skills) {
+            const skillsContainer = document.getElementById('skills-container');
+            skillsContainer.innerHTML = '';
+            settings.skills.split(',').forEach(skill => {
+                const span = document.createElement('span');
+                span.className = 'skill-badge';
+                span.textContent = skill.trim();
+                skillsContainer.appendChild(span);
+            });
+        }
+
+        // Status
+        if (settings.status) {
+            const badge = document.getElementById('status-badge');
+            document.getElementById('status-text').textContent = settings.status;
+            badge.style.display = 'inline-flex';
+        }
+
         // GitHub Stats
         if (settings.github_username) {
             const widget = document.getElementById('github-widget');
@@ -26,6 +57,10 @@ async function loadSettings() {
             img.src = `https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(settings.github_username)}&show_icons=true&theme=radical&hide_border=true&bg_color=00000000&text_color=ffffff&title_color=ff6eff&icon_color=00eeff`;
             widget.style.display = 'block';
         }
+
+        // Save settings globally for social footer rendering
+        window.appSettings = settings;
+
     } catch (e) {
         console.error("Failed to load settings", e);
     }
@@ -55,12 +90,14 @@ async function loadLinks() {
                             loading="lazy"></iframe>
                 `;
                 container.appendChild(embedDiv);
-            } else if ((link.link_type === 'spotify-song' || link.link_type === 'spotify-playlist') && link.embed_url) {
+            } else if (link.link_type === 'spotify' && link.embed_url) {
                 // Render Spotify IFrame container
                 const embedDiv = document.createElement('div');
                 embedDiv.className = 'link-card embed-card';
                 embedDiv.style.animationDelay = animDelay;
-                const spotifyHeight = link.link_type === 'spotify-playlist' ? "352" : "152";
+                // Automatically determine height based on URL type
+                const isPlaylist = link.embed_url.includes('/playlist/') || link.embed_url.includes('/album/');
+                const spotifyHeight = isPlaylist ? "352" : "152";
                 embedDiv.innerHTML = `
                     <iframe src="${link.embed_url}" 
                             width="100%" height="${spotifyHeight}" frameBorder="0" allowfullscreen="" 
@@ -123,10 +160,130 @@ async function loadLinks() {
                 container.appendChild(a);
             }
         });
+
+        // After links are loaded, render the social footer if enabled
+        renderSocialFooter(links);
+
     } catch (err) {
         container.innerHTML = '<div style="color: red; text-align: center;">Error loading links.</div>';
     }
 }
+
+// ===== TYPEWRITER ANIMATION =====
+function startTypewriter(taglines) {
+    const el = document.getElementById('typing-tagline');
+    if (!el || !taglines.length) return;
+
+    let taglineIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    let typeSpeed = 100;
+
+    function type() {
+        const currentTagline = taglines[taglineIndex];
+
+        if (isDeleting) {
+            el.textContent = currentTagline.substring(0, charIndex - 1);
+            charIndex--;
+            typeSpeed = 50;
+        } else {
+            el.textContent = currentTagline.substring(0, charIndex + 1);
+            charIndex++;
+            typeSpeed = 100;
+        }
+
+        if (!isDeleting && charIndex === currentTagline.length) {
+            isDeleting = true;
+            typeSpeed = 2000; // Pause at end
+        } else if (isDeleting && charIndex === 0) {
+            isDeleting = false;
+            taglineIndex = (taglineIndex + 1) % taglines.length;
+            typeSpeed = 500;
+        }
+
+        setTimeout(type, typeSpeed);
+    }
+
+    type();
+}
+
+// ===== THEME TOGGLE (LIGHT/DARK) =====
+function setupThemeToggle() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    // Check saved preference
+    if (localStorage.getItem('preferred-mode') === 'light') {
+        document.body.classList.add('light-mode');
+        btn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    }
+
+    btn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('preferred-mode', isLight ? 'light' : 'dark');
+        btn.innerHTML = isLight ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+    });
+}
+
+// ===== SOCIAL FOOTER =====
+function renderSocialFooter(links) {
+    const footer = document.getElementById('social-footer');
+    if (!footer) return;
+
+    // Only show if setting is enabled
+    if (!window.appSettings || window.appSettings.show_social_footer === 'false') {
+        footer.style.display = 'none';
+        return;
+    }
+
+    footer.innerHTML = '';
+
+    // Map of common icons for the footer
+    const iconMap = {
+        'instagram': 'fa-brands fa-instagram',
+        'snapchat': 'fa-brands fa-snapchat',
+        'twitter': 'fa-brands fa-x-twitter',
+        'github': 'fa-brands fa-github',
+        'linkedin': 'fa-brands fa-linkedin',
+        'youtube': 'fa-brands fa-youtube',
+        'discord': 'fa-brands fa-discord',
+        'reddit': 'fa-brands fa-reddit',
+        'pinterest': 'fa-brands fa-pinterest',
+        'facebook': 'fa-brands fa-facebook',
+        'tiktok': 'fa-brands fa-tiktok',
+        'twitch': 'fa-brands fa-twitch',
+        'spotify': 'fa-brands fa-spotify'
+    };
+
+    links.forEach(link => {
+        if (link.link_type !== 'link') return; // Skip embeds in footer
+
+        const lowerTitle = link.title.toLowerCase();
+        let iconClass = 'fa-solid fa-link';
+
+        // Check if title matches any key in iconMap
+        for (const [key, value] of Object.entries(iconMap)) {
+            if (lowerTitle.includes(key)) {
+                iconClass = value;
+                break;
+            }
+        }
+
+        const a = document.createElement('a');
+        a.href = link.url;
+        a.className = 'social-icon';
+        a.target = '_blank';
+        a.title = link.title;
+        a.innerHTML = `<i class="${iconClass}"></i>`;
+        footer.appendChild(a);
+    });
+
+    if (footer.children.length === 0) {
+        footer.style.display = 'none';
+    }
+}
+
 
 function setupContactForm() {
     const form = document.getElementById('contact-form');

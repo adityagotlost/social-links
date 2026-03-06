@@ -156,25 +156,35 @@ app.post('/api/contact', async (req, res) => {
     try {
         await dbRun('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)', [name, email, message]);
 
-        // Nodemailer logic
-        if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-            let transporter = nodemailer.createTransport({
-                host: process.env.SMTP_HOST,
-                port: process.env.SMTP_PORT || 587,
-                secure: process.env.SMTP_PORT == 465,
-                auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        // Send Gmail notification if credentials are configured
+        if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+            const nodemailer = require('nodemailer');
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.GMAIL_USER,
+                    pass: process.env.GMAIL_APP_PASSWORD
+                }
             });
             await transporter.sendMail({
-                from: process.env.SMTP_USER,
-                to: process.env.SMTP_USER, // Send to yourself
-                subject: `New Contact from ${name} `,
-                text: `Name: ${name} \nEmail: ${email} \n\nMessage: \n${message} `
+                from: `"Social Links" <${process.env.GMAIL_USER}>`,
+                to: 'aiexpbyaditya@gmail.com',
+                subject: `📩 New message from ${name} on your Social Links`,
+                html: `
+                    <div style="font-family:sans-serif; max-width:500px; margin:auto; padding:24px; background:#f9f9f9; border-radius:12px;">
+                        <h2 style="color:#4361ee;">📬 New Contact Message</h2>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+                        <hr style="border:none; border-top:1px solid #eee; margin:16px 0;">
+                        <p><strong>Message:</strong></p>
+                        <p style="background:#fff; padding:16px; border-radius:8px; border:1px solid #eee;">${message.replace(/\n/g, '<br>')}</p>
+                        <p style="color:#aaa; font-size:0.8rem; margin-top:16px;">Sent from your Social Links page</p>
+                    </div>
+                `
             });
         } else {
-            console.log("\n--- NEW CONTACT MESSAGE ---");
-            console.log(`From: ${name} <${email}>`);
-            console.log(`Message: ${message}`);
-            console.log("---------------------------\n");
+            console.log('\n--- EMAIL NOT CONFIGURED ---');
+            console.log('Add GMAIL_USER and GMAIL_APP_PASSWORD to .env to receive email notifications.');
         }
 
         res.json({ success: true, message: 'Message sent successfully!' });
@@ -267,7 +277,7 @@ app.post('/api/admin/links', requireAuth, async (req, res) => {
     let { title, url, icon, is_active, thumbnail_url, link_type, embed_url } = req.body;
     try {
         // Auto-fetch Spotify data if applicable
-        if (link_type === 'spotify-song' || link_type === 'spotify-playlist') {
+        if (link_type === 'spotify') {
             const spotifyData = await fetchSpotifyData(embed_url);
             if (spotifyData) {
                 thumbnail_url = spotifyData.thumbnail_url;
@@ -308,7 +318,7 @@ app.put('/api/admin/links/:id', requireAuth, async (req, res) => {
     let { title, url, icon, is_active, thumbnail_url, link_type, embed_url } = req.body;
     try {
         // Auto-fetch Spotify data if applicable
-        if (link_type === 'spotify-song' || link_type === 'spotify-playlist') {
+        if (link_type === 'spotify') {
             // Only fetch if they provided a raw spotify.com URL to scrape, otherwise leave existing value
             if (embed_url && embed_url.includes('spotify.com') && !embed_url.includes('/embed/')) {
                 const spotifyData = await fetchSpotifyData(embed_url);

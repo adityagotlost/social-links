@@ -653,3 +653,148 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* --- NEW PROFILE ENHANCEMENTS --- */
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(5px);
+    margin-left: 5px;
+}
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4ade80;
+    animation: status-pulse 2s infinite;
+}
+@keyframes status-pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Typing Animation */
+.typing-container {
+    height: 24px;
+    margin-top: 8px;
+}
+.typing-tagline {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.typing-cursor {
+    color: var(--text-primary);
+    animation: blink 1s infinite;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Skills Badges */
+.skills-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 15px;
+}
+.skill-badge {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s, background 0.2s;
+}
+.skill-badge:hover {
+    transform: translateY(-2px);
+    background: var(--card-hover);
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.theme-toggle:hover {
+    transform: scale(1.1) rotate(15deg);
+    background: var(--card-hover);
+}
+
+/* Social Footer */
+.social-footer {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid var(--card-border);
+}
+.social-icon {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+.social-icon:hover {
+    color: var(--text-primary);
+    transform: translateY(-3px);
+}
+
+/* Light Mode Overrides */
+body.light-mode {
+    --bg-color: #ffffff;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555555;
+    --card-bg: rgba(0, 0, 0, 0.03);
+    --card-border: rgba(0, 0, 0, 0.1);
+    --card-hover: rgba(0, 0, 0, 0.06);
+}
+body.light-mode {
+    background: #f0f2f5 !important;
+}
+body.light-mode .link-card {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+}
+body.light-mode .status-badge {
+    background: rgba(255, 255, 255, 0.8);
+    color: #333;
+}
+body.light-mode .skill-badge {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+body.light-mode .social-footer {
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+body.light-mode .theme-toggle {
+    background: #fff;
+    color: #333;
+}
