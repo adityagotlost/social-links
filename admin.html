@@ -181,7 +181,14 @@
                 </div>
                 <!-- Existing Settings -->
                 <div class="form-group"><label>Profile Name</label><input type="text" id="setting-profile_name"></div>
-                <div class="form-group"><label>Profile Image URL</label><input type="text" id="setting-profile_img_url"></div>
+                <div class="form-group">
+                    <label>Profile Image</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="setting-profile_img_url" placeholder="/uploads/...">
+                        <input type="file" id="profile-img-upload" accept="image/*" style="display:none;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('profile-img-upload').click()">Upload</button>
+                    </div>
+                </div>
                 <div class="form-group"><label>Bio Text</label><textarea id="setting-bio" placeholder="Full bio description..."></textarea></div>
                 <div class="form-group"><label>Bio Taglines</label><input type="text" id="setting-taglines" placeholder="Developer, Gamer, Creator (comma separated)"></div>
                 <div class="form-group"><label>Skills</label><input type="text" id="setting-skills" placeholder="React, Node.js, Python (comma separated)"></div>

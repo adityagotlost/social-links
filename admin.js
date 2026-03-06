@@ -123,6 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
         handleUpload(this, 'setting-seo_image');
     });
 
+    document.getElementById('profile-img-upload').addEventListener('change', function () {
+        handleUpload(this, 'setting-profile_img_url');
+    });
+
     // Handle Settings Form
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
