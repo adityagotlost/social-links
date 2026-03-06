@@ -238,15 +238,23 @@ app.get('/api/vcard', async (req, res) => {
         const email = settings.vcard_email || '';
         const phone = settings.vcard_phone || '';
         const instagram = settings.vcard_instagram || '';
+        const company = settings.vcard_company || '';
+        const jobTitle = settings.vcard_job_title || '';
+        const website = settings.vcard_website || '';
+        const address = settings.vcard_address || '';
 
-        const vcardData = `BEGIN:VCARD
-VERSION:3.0
-N:${lastName};${firstName};;;
-FN:${firstName} ${lastName}
-EMAIL:${email}
-TEL:${phone}
-URL:${instagram}
-END:VCARD`;
+        // Safely encode any line breaks for vCard format
+        const cleanAddress = address.replace(/\n/g, '\\n');
+
+        let vcardData = `BEGIN:VCARD\nVERSION:3.0\nN:${lastName};${firstName};;;\nFN:${firstName} ${lastName}\nEMAIL:${email}\nTEL:${phone}`;
+
+        if (company) vcardData += `\nORG:${company}`;
+        if (jobTitle) vcardData += `\nTITLE:${jobTitle}`;
+        if (website) vcardData += `\nURL:${website}`;
+        if (instagram) vcardData += `\nX-SOCIALPROFILE;type=instagram:${instagram}`;
+        if (address) vcardData += `\nADR:;;${cleanAddress};;;;`;
+
+        vcardData += `\nEND:VCARD`;
 
         res.setHeader('Content-Type', 'text/vcard');
         res.setHeader('Content-Disposition', `attachment; filename="contact.vcf"`);

@@ -157,13 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             seo_image: document.getElementById('setting-seo_image').value,
             animated_background: document.getElementById('setting-animated_background').value,
             custom_css: document.getElementById('setting-custom_css').value,
-            custom_js: document.getElementById('setting-custom_js').value,
-            vcard_active: document.getElementById('setting-vcard_active').value,
-            vcard_first_name: document.getElementById('setting-vcard_first_name').value,
-            vcard_last_name: document.getElementById('setting-vcard_last_name').value,
-            vcard_email: document.getElementById('setting-vcard_email').value,
-            vcard_phone: document.getElementById('setting-vcard_phone').value,
-            vcard_instagram: document.getElementById('setting-vcard_instagram').value
+            custom_js: document.getElementById('setting-custom_js').value
         };
 
         try {
@@ -183,6 +177,43 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Error saving settings');
         }
     });
+
+    const vcardForm = document.getElementById('vcard-form');
+    if (vcardForm) {
+        vcardForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const settings = {
+                vcard_active: document.getElementById('setting-vcard_active').value,
+                vcard_first_name: document.getElementById('setting-vcard_first_name').value,
+                vcard_last_name: document.getElementById('setting-vcard_last_name').value,
+                vcard_email: document.getElementById('setting-vcard_email').value,
+                vcard_phone: document.getElementById('setting-vcard_phone').value,
+                vcard_instagram: document.getElementById('setting-vcard_instagram').value,
+                vcard_company: document.getElementById('setting-vcard_company').value,
+                vcard_job_title: document.getElementById('setting-vcard_job_title').value,
+                vcard_website: document.getElementById('setting-vcard_website').value,
+                vcard_address: document.getElementById('setting-vcard_address').value
+            };
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (res.ok) {
+                    const msg = document.getElementById('vcard-save-msg');
+                    msg.style.display = 'block';
+                    setTimeout(() => msg.style.display = 'none', 3000);
+                } else {
+                    alert('Error saving vCard settings');
+                }
+            } catch (err) {
+                alert('Error saving vCard settings');
+            }
+        });
+    }
+
 });
 
 async function checkLoginStatus() {
@@ -439,6 +470,10 @@ async function loadSettings() {
         if (settings.vcard_email) document.getElementById('setting-vcard_email').value = settings.vcard_email;
         if (settings.vcard_phone) document.getElementById('setting-vcard_phone').value = settings.vcard_phone;
         if (settings.vcard_instagram) document.getElementById('setting-vcard_instagram').value = settings.vcard_instagram;
+        if (settings.vcard_company) document.getElementById('setting-vcard_company').value = settings.vcard_company;
+        if (settings.vcard_job_title) document.getElementById('setting-vcard_job_title').value = settings.vcard_job_title;
+        if (settings.vcard_website) document.getElementById('setting-vcard_website').value = settings.vcard_website;
+        if (settings.vcard_address) document.getElementById('setting-vcard_address').value = settings.vcard_address;
 
     } catch (err) {
         console.error('Failed to load settings:', err);

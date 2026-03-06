@@ -117,7 +117,11 @@ function createTables() {
                     ['vcard_last_name', 'Anand'],
                     ['vcard_email', 'adityaanand3316@gmail.com'],
                     ['vcard_phone', '9304519320'],
-                    ['vcard_instagram', 'https://instagram.com/kage_adi']
+                    ['vcard_instagram', 'https://instagram.com/kage_adi'],
+                    ['vcard_company', ''],
+                    ['vcard_job_title', ''],
+                    ['vcard_website', ''],
+                    ['vcard_address', '']
                 ];
                 // Insert new settings if they don't exist
                 db.all("SELECT key FROM settings", (err, rows) => {
