@@ -43,6 +43,7 @@
             <button class="tab-btn" data-target="analytics-tab">Analytics</button>
             <button class="tab-btn" data-target="messages-tab">Messages</button>
             <button class="tab-btn" data-target="subscribers-tab">Subscribers</button>
+            <button class="tab-btn" data-target="gallery-tab">Gallery</button>
             <button class="tab-btn" data-target="settings-tab">Settings</button>
         </div>
 
@@ -116,6 +117,29 @@
             </div>
         </div>
 
+        <!-- Gallery -->
+        <div id="gallery-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Image Gallery</h2>
+                <button class="btn btn-primary" onclick="openGalleryModal()">Add Image</button>
+            </div>
+            <div class="table-container">
+                <table id="gallery-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Image</th>
+                            <th>Caption</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gallery-tbody">
+                        <!-- Gallery loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Settings -->
         <div id="settings-tab" class="tab-content">
             <h2>Global Settings & SEO</h2>
@@ -143,6 +167,16 @@
                         <option value="Playfair Display">Playfair Display (Serif)</option>
                         <option value="Space Mono">Space Mono (Monospace)</option>
                         <option value="Caveat">Caveat (Handwriting)</option>
+                    </select>
+                </div>
+                <!-- Animated Backgrounds -->
+                <div class="form-group row-group">
+                    <label>Animated Background</label>
+                    <select id="setting-animated_background">
+                        <option value="none">None</option>
+                        <option value="particles">Floating Particles</option>
+                        <option value="orbs">Moving Glowing Orbs</option>
+                        <option value="matrix">Matrix Rain</option>
                     </select>
                 </div>
                 <!-- Existing Settings -->
@@ -211,6 +245,18 @@
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('seo-file-upload').click()">Upload</button>
                     </div>
                 </div>
+
+                <!-- Custom CSS & JS (Advanced) -->
+                <h3 style="margin-top: 20px; color: #ff6eff;">⚙️ Advanced Customization</h3>
+                <div class="form-group">
+                    <label>Custom CSS (Overrides default styling)</label>
+                    <textarea id="setting-custom_css" rows="6" placeholder="body { background: red; }" style="font-family: monospace;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Custom JavaScript</label>
+                    <textarea id="setting-custom_js" rows="6" placeholder="console.log('Hello Custom JS');" style="font-family: monospace;"></textarea>
+                </div>
+
                 <button type="submit" class="btn btn-primary" style="margin-top:20px;">Save Settings</button>
 
                 <!-- Spotify Connect -->
@@ -250,8 +296,18 @@
                         <label>Link Type</label>
                         <select id="link-type">
                             <option value="standard">Standard Button</option>
+                            <option value="folder">Folder (Accordion)</option>
                             <option value="embed">Embed (Video/Audio/Custom)</option>
                             <option value="spotify">Spotify</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Parent Link ID for Folders -->
+                    <div class="form-group" id="parent-id-group" style="display:none;">
+                        <label>Parent Folder (Leave empty if none)</label>
+                        <select id="link-parent-id">
+                            <option value="">-- None --</option>
+                            <!-- Dynamically populated with folders -->
                         </select>
                     </div>
                      <div class="form-group" style="flex: 1;">
@@ -273,6 +329,34 @@
         </div>
     </div>
 
+    <!-- Add/Edit Gallery Modal -->
+    <div id="gallery-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGalleryModal()">&times;</span>
+            <h2 id="gallery-modal-title">Add Image</h2>
+            <form id="gallery-form">
+                <input type="hidden" id="gallery-id">
+                
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="gallery-image-url" required>
+                        <input type="file" id="gallery-upload" accept="image/*" style="display:none;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('gallery-upload').click()">Upload</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Caption</label>
+                    <input type="text" id="gallery-caption" placeholder="Optional brief caption">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top:20px; width:100%;">Save Image</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>

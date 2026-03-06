@@ -294,7 +294,7 @@ async function fetchSpotifyData(url) {
 
 // Add a new link
 app.post('/api/admin/links', requireAuth, async (req, res) => {
-    let { title, url, icon, is_active, thumbnail_url, link_type, embed_url } = req.body;
+    let { title, url, icon, is_active, thumbnail_url, link_type, embed_url, parent_id } = req.body;
     try {
         // Auto-fetch Spotify data if applicable
         if (link_type === 'spotify') {
@@ -310,9 +310,9 @@ app.post('/api/admin/links', requireAuth, async (req, res) => {
         const nextOrder = (row && row.maxOrder !== null) ? row.maxOrder + 1 : 1;
 
         const result = await dbRun(
-            `INSERT INTO links (title, url, icon, display_order, is_active, thumbnail_url, link_type, embed_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, url, icon, nextOrder, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null]
+            `INSERT INTO links (title, url, icon, display_order, is_active, thumbnail_url, link_type, embed_url, parent_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [title, url, icon, nextOrder, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null, parent_id || null]
         );
         res.json({ success: true, id: result.id });
     } catch (err) {
@@ -335,7 +335,7 @@ app.put('/api/admin/links/reorder', requireAuth, async (req, res) => {
 
 // Update a link
 app.put('/api/admin/links/:id', requireAuth, async (req, res) => {
-    let { title, url, icon, is_active, thumbnail_url, link_type, embed_url } = req.body;
+    let { title, url, icon, is_active, thumbnail_url, link_type, embed_url, parent_id } = req.body;
     try {
         // Auto-fetch Spotify data if applicable
         if (link_type === 'spotify') {
@@ -351,9 +351,9 @@ app.put('/api/admin/links/:id', requireAuth, async (req, res) => {
 
         await dbRun(
             `UPDATE links SET title = ?, url = ?, icon = ?, is_active = ?, 
-             thumbnail_url = ?, link_type = ?, embed_url = ? 
+             thumbnail_url = ?, link_type = ?, embed_url = ?, parent_id = ? 
              WHERE id = ?`,
-            [title, url, icon, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null, req.params.id]
+            [title, url, icon, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null, parent_id || null, req.params.id]
         );
         res.json({ success: true });
     } catch (err) {
@@ -398,6 +398,60 @@ app.delete('/api/admin/subscribers/:id', requireAuth, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete subscriber' });
+    }
+});
+
+// ===== GALLERY API ENDPOINTS =====
+
+app.get('/api/gallery', async (req, res) => {
+    try {
+        const images = await dbAll('SELECT * FROM gallery ORDER BY display_order ASC');
+        res.json(images);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch gallery' });
+    }
+});
+
+app.get('/api/admin/gallery', requireAuth, async (req, res) => {
+    try {
+        const images = await dbAll('SELECT * FROM gallery ORDER BY display_order ASC');
+        res.json(images);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch gallery' });
+    }
+});
+
+app.post('/api/admin/gallery', requireAuth, async (req, res) => {
+    const { image_url, caption } = req.body;
+    if (!image_url) return res.status(400).json({ error: 'Image URL is required' });
+    try {
+        const row = await dbGet('SELECT MAX(display_order) as maxOrder FROM gallery');
+        const nextOrder = (row && row.maxOrder !== null) ? row.maxOrder + 1 : 1;
+        const result = await dbRun('INSERT INTO gallery (image_url, caption, display_order) VALUES (?, ?, ?)', [image_url, caption, nextOrder]);
+        res.json({ success: true, id: result.id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to add image' });
+    }
+});
+
+app.put('/api/admin/gallery/reorder', requireAuth, async (req, res) => {
+    const { orderedIds } = req.body;
+    try {
+        for (let i = 0; i < orderedIds.length; i++) {
+            await dbRun('UPDATE gallery SET display_order = ? WHERE id = ?', [i + 1, orderedIds[i]]);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to reorder gallery' });
+    }
+});
+
+app.delete('/api/admin/gallery/:id', requireAuth, async (req, res) => {
+    try {
+        await dbRun('DELETE FROM gallery WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete image' });
     }
 });
 

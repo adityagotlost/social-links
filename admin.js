@@ -58,14 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // If embed type, use the url as embed_url
         let finalUrl = url;
         let finalEmbed = null;
-        if (link_type === 'embed' || link_type === 'spotify') {
+        if (link_type === 'folder') {
+            finalUrl = '#'; // Parent folder has no real link
+        } else if (link_type === 'embed' || link_type === 'spotify') {
             finalEmbed = url;
             finalUrl = '#'; // Placeholder
         }
 
+        const parent_id = document.getElementById('link-parent-id').value || null;
+
         const payload = {
             title, url: finalUrl, icon, is_active,
-            thumbnail_url, link_type, embed_url: finalEmbed
+            thumbnail_url, link_type, embed_url: finalEmbed, parent_id
         };
         const method = id ? 'PUT' : 'POST';
         const endpoint = id ? `/api/admin/links/${id}` : '/api/admin/links';
@@ -139,7 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
             tip_jar_url: document.getElementById('setting-tip_jar_url').value,
             seo_title: document.getElementById('setting-seo_title').value,
             seo_description: document.getElementById('setting-seo_description').value,
-            seo_image: document.getElementById('setting-seo_image').value
+            seo_image: document.getElementById('setting-seo_image').value,
+            animated_background: document.getElementById('setting-animated_background').value,
+            custom_css: document.getElementById('setting-custom_css').value,
+            custom_js: document.getElementById('setting-custom_js').value
         };
 
         try {
@@ -187,7 +194,10 @@ function showDashboard() {
     loadMessages();
     loadSubscribers();
     loadSettings();
+    loadGallery();
 }
+
+let allLinksData = [];
 
 // Data Loaders
 async function loadLinksAndAnalytics() {
@@ -198,12 +208,25 @@ async function loadLinksAndAnalytics() {
             return;
         }
         const links = await res.json();
+        allLinksData = links; // Store globally
 
         const linksTbody = document.getElementById('links-tbody');
         const analyticsTbody = document.getElementById('analytics-tbody');
 
         linksTbody.innerHTML = '';
         analyticsTbody.innerHTML = '';
+
+        // Update the parent link dropdown for folders
+        const parentSelect = document.getElementById('link-parent-id');
+        const oldParentValue = parentSelect.value;
+        parentSelect.innerHTML = '<option value="">-- None --</option>';
+        links.filter(l => l.link_type === 'folder').forEach(folder => {
+            const opt = document.createElement('option');
+            opt.value = folder.id;
+            opt.textContent = folder.title;
+            parentSelect.appendChild(opt);
+        });
+        parentSelect.value = oldParentValue;
 
         links.forEach(link => {
             // Links Table Row
@@ -389,6 +412,9 @@ async function loadSettings() {
         if (settings.seo_title) document.getElementById('setting-seo_title').value = settings.seo_title;
         if (settings.seo_description) document.getElementById('setting-seo_description').value = settings.seo_description;
         if (settings.seo_image) document.getElementById('setting-seo_image').value = settings.seo_image;
+        if (settings.animated_background) document.getElementById('setting-animated_background').value = settings.animated_background;
+        if (settings.custom_css) document.getElementById('setting-custom_css').value = settings.custom_css;
+        if (settings.custom_js) document.getElementById('setting-custom_js').value = settings.custom_js;
 
     } catch (err) {
         console.error('Failed to load settings:', err);
@@ -407,6 +433,7 @@ window.editLink = function (link) {
     document.getElementById('link-icon').value = link.icon;
     document.getElementById('link-active').checked = link.is_active === 1;
     document.getElementById('link-type').value = link.link_type || 'standard';
+    document.getElementById('link-parent-id').value = link.parent_id || '';
 
     // Trigger change event to update the URL label
     const event = new Event('change');
@@ -438,6 +465,7 @@ window.openModal = function () {
     document.getElementById('modal-title').textContent = 'Add Link';
     document.getElementById('link-form').reset();
     document.getElementById('link-id').value = '';
+    document.getElementById('link-parent-id').value = '';
 
     // Trigger change event to reset label
     const event = new Event('change');
@@ -459,11 +487,106 @@ document.getElementById('link-type').addEventListener('change', (e) => {
     if (type === 'spotify') {
         urlLabel.textContent = 'Spotify URL';
         hint.textContent = "Paste standard Spotify link (e.g. open.spotify.com/track/... or open.spotify.com/playlist/...)";
+        document.getElementById('parent-id-group').style.display = 'block';
     } else if (type === 'embed') {
         urlLabel.textContent = 'Embed URL (Youtube/etc.)';
         hint.textContent = "Paste iframe src link (e.g. youtube.com/embed/...)";
+        document.getElementById('parent-id-group').style.display = 'block';
+    } else if (type === 'folder') {
+        urlLabel.textContent = 'Folder Name (Ignored)';
+        hint.textContent = "Folders don't need a URL, they just contain other links.";
+        document.getElementById('parent-id-group').style.display = 'none'; // Folders can't be inside folders for simplicity
     } else {
         urlLabel.textContent = 'URL';
         hint.textContent = "";
+        document.getElementById('parent-id-group').style.display = 'block';
     }
 });
+
+// Gallery Functions
+async function loadGallery() {
+    try {
+        const res = await fetch('/api/admin/gallery');
+        if (!res.ok) return;
+        const images = await res.json();
+
+        const tbody = document.getElementById('gallery-tbody');
+        tbody.innerHTML = '';
+
+        images.forEach(img => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = img.id;
+            tr.innerHTML = `
+                <td>
+                    <i class="fa-solid fa-grip-vertical gallery-handle" style="cursor:grab; margin-right:10px; color:var(--text-muted);" title="Drag to reorder"></i>
+                    ${img.display_order}
+                </td>
+                <td><img src="${img.image_url}" alt="${img.caption || ''}" style="height: 50px; border-radius: 5px;"></td>
+                <td>${img.caption || '<em>None</em>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteGalleryImage(${img.id})">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        if (images.length > 0 && typeof Sortable !== 'undefined') {
+            Sortable.create(tbody, {
+                handle: '.gallery-handle',
+                animation: 150,
+                onEnd: async function () {
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    const orderedIds = rows.map(r => parseInt(r.dataset.id));
+                    try {
+                        await fetch('/api/admin/gallery/reorder', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ orderedIds })
+                        });
+                        loadGallery(); // Refresh order numbers
+                    } catch (err) { }
+                }
+            });
+        }
+    } catch (e) { }
+}
+
+window.openGalleryModal = function () {
+    document.getElementById('gallery-form').reset();
+    document.getElementById('gallery-modal').style.display = 'block';
+};
+
+window.closeGalleryModal = function () {
+    document.getElementById('gallery-modal').style.display = 'none';
+};
+
+document.getElementById('gallery-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const image_url = document.getElementById('gallery-image-url').value;
+    const caption = document.getElementById('gallery-caption').value;
+
+    try {
+        const res = await fetch('/api/admin/gallery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_url, caption })
+        });
+        if (res.ok) {
+            closeGalleryModal();
+            loadGallery();
+        } else {
+            alert('Failed to save image');
+        }
+    } catch (err) { }
+});
+
+window.deleteGalleryImage = async function (id) {
+    if (confirm('Delete this image?')) {
+        try {
+            const res = await fetch('/api/admin/gallery/' + id, { method: 'DELETE' });
+            if (res.ok) {
+                loadGallery();
+            }
+        } catch (err) { }
+    }
+};

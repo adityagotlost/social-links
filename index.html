@@ -9,9 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Inter:wght@400;500;700&family=Roboto:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Swiper's CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Custom CSS applied from admin -->
+    <style id="custom-css-block"></style>
 </head>
 <body>
+    <!-- Background Canvas/Layer -->
+    <div id="animated-bg" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></div>
 
     
     <main class="container">
@@ -44,6 +51,17 @@
             <a id="tip-jar-link" href="#" target="_blank" class="tip-jar-btn">
                 <i class="fa-solid fa-mug-hot"></i> <span id="tip-jar-text">Buy me a coffee</span>
             </a>
+        </div>
+
+        <!-- Gallery Slider -->
+        <div id="gallery-container" style="display:none; margin-bottom: 20px;">
+            <div class="swiper gallery-slider" style="border-radius:14px; overflow:hidden;">
+                <div class="swiper-wrapper" id="gallery-wrapper">
+                    <!-- Slides will be injected here -->
+                </div>
+                <!-- Add Pagination -->
+                <div class="swiper-pagination"></div>
+            </div>
         </div>
 
         <div id="links-container" class="links-section">
@@ -115,6 +133,11 @@
         </div>
     </div>
 
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
     <script src="script.js"></script>
+    
+    <!-- Custom JS injected dynamically -->
+    <script id="custom-js-block"></script>
 </body>
 </html>

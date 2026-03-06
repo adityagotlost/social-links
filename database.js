@@ -34,6 +34,15 @@ function createTables() {
         db.run(`ALTER TABLE links ADD COLUMN thumbnail_url TEXT`, (err) => { });
         db.run(`ALTER TABLE links ADD COLUMN link_type TEXT DEFAULT 'standard'`, (err) => { });
         db.run(`ALTER TABLE links ADD COLUMN embed_url TEXT`, (err) => { });
+        db.run(`ALTER TABLE links ADD COLUMN parent_id INTEGER DEFAULT NULL`, (err) => { });
+
+        // Gallery Table
+        db.run(`CREATE TABLE IF NOT EXISTS gallery (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_url TEXT NOT NULL,
+            caption TEXT,
+            display_order INTEGER NOT NULL DEFAULT 0
+        )`);
 
         // Analytics Table
         db.run(`CREATE TABLE IF NOT EXISTS analytics (
@@ -90,7 +99,10 @@ function createTables() {
                     ['tip_jar_text', 'Buy me a coffee'],
                     ['seo_title', 'My Social Links'],
                     ['seo_description', 'Welcome to my little corner of the internet!'],
-                    ['seo_image', '']
+                    ['seo_image', ''],
+                    ['animated_background', 'none'],
+                    ['custom_css', ''],
+                    ['custom_js', '']
                 ];
                 // Insert new settings if they don't exist
                 db.all("SELECT key FROM settings", (err, rows) => {

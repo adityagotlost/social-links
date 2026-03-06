@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupQRCode();
     setupThemeToggle();
     countVisit();
+    loadGallery();
     pollSpotify();
     setInterval(pollSpotify, 30000);
 });
@@ -56,6 +57,25 @@ async function loadSettings() {
             badge.style.display = 'inline-flex';
         }
 
+        // Custom CSS
+        if (settings.custom_css) {
+            document.getElementById('custom-css-block').textContent = settings.custom_css;
+        }
+
+        // Custom JS (Wait until document is loaded ideally, or just eval it)
+        if (settings.custom_js) {
+            try {
+                const script = document.createElement('script');
+                script.textContent = settings.custom_js;
+                document.body.appendChild(script);
+            } catch (e) { console.error('Custom JS Error', e); }
+        }
+
+        // Animated Background
+        if (settings.animated_background && settings.animated_background !== 'none') {
+            loadAnimatedBackground(settings.animated_background);
+        }
+
         // Tip Jar
         const tipJarContainer = document.getElementById('tip-jar-container');
         if (tipJarContainer && settings.tip_jar_active === 'true' && settings.tip_jar_url) {
@@ -89,90 +109,127 @@ async function loadLinks() {
 
         container.innerHTML = '';
 
-        links.forEach((link, index) => {
-            // Apply animation delay for staggered entrance
+        // Create the element for a single link
+        const createLinkElement = (link, index) => {
             const animDelay = `${index * 0.1}s`;
 
-            if (link.link_type === 'embed' && link.embed_url) {
-                // Render Generic IFrame container
+            if (link.link_type === 'folder') {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'link-card folder-card';
+                folderDiv.style.animationDelay = animDelay;
+                folderDiv.style.display = 'block';
+                folderDiv.style.padding = '0';
+                folderDiv.dataset.id = link.id;
+
+                const headerBtn = document.createElement('button');
+                headerBtn.className = 'folder-header';
+                headerBtn.style.width = '100%';
+                headerBtn.style.padding = '18px 20px';
+                headerBtn.style.display = 'flex';
+                headerBtn.style.alignItems = 'center';
+                headerBtn.style.justifyContent = 'space-between';
+                headerBtn.style.background = 'transparent';
+                headerBtn.style.border = 'none';
+                headerBtn.style.color = 'inherit';
+                headerBtn.style.fontFamily = 'inherit';
+                headerBtn.style.fontSize = '1.1rem';
+                headerBtn.style.fontWeight = '500';
+                headerBtn.style.cursor = 'pointer';
+
+                let iconHtml = link.icon ? `<i class="fa-solid fa-${link.icon.toLowerCase().replace(' ', '-')}"></i>` : `<i class="fa-solid fa-folder"></i>`;
+
+                headerBtn.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div class="icon-wrapper">${iconHtml}</div>
+                        <span>${link.title}</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down folder-icon" style="transition: transform 0.3s;"></i>
+                `;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'folder-content';
+                contentDiv.style.display = 'none';
+                contentDiv.style.padding = '0 20px 20px 20px';
+                contentDiv.style.flexDirection = 'column';
+                contentDiv.style.gap = '15px';
+
+                headerBtn.addEventListener('click', () => {
+                    const isOpen = contentDiv.style.display === 'flex';
+                    contentDiv.style.display = isOpen ? 'none' : 'flex';
+                    headerBtn.querySelector('.folder-icon').style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                });
+
+                folderDiv.appendChild(headerBtn);
+                folderDiv.appendChild(contentDiv);
+                return { el: folderDiv, contentDiv };
+
+            } else if (link.link_type === 'embed' && link.embed_url) {
                 const embedDiv = document.createElement('div');
                 embedDiv.className = 'link-card embed-card';
                 embedDiv.style.animationDelay = animDelay;
-                embedDiv.innerHTML = `
-                    <iframe src="${link.embed_url}" 
-                            width="100%" height="152" frameBorder="0" allowfullscreen="" 
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                            loading="lazy"></iframe>
-                `;
-                container.appendChild(embedDiv);
+                embedDiv.innerHTML = `<iframe src="${link.embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" loading="lazy"></iframe>`;
+                return { el: embedDiv };
             } else if (link.link_type === 'spotify' && link.embed_url) {
-                // Render Spotify IFrame container
                 const embedDiv = document.createElement('div');
                 embedDiv.className = 'link-card embed-card';
                 embedDiv.style.animationDelay = animDelay;
-                // Automatically determine height based on URL type
                 const isPlaylist = link.embed_url.includes('/playlist/') || link.embed_url.includes('/album/');
-                const spotifyHeight = isPlaylist ? "352" : "152";
-                embedDiv.innerHTML = `
-                    <iframe src="${link.embed_url}" 
-                            width="100%" height="${spotifyHeight}" frameBorder="0" allowfullscreen="" 
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                            loading="lazy" style="border-radius: 12px;"></iframe>
-                `;
-                container.appendChild(embedDiv);
+                embedDiv.innerHTML = `<iframe src="${link.embed_url}" width="100%" height="${isPlaylist ? '352' : '152'}" frameBorder="0" allowfullscreen="" loading="lazy" style="border-radius: 12px;"></iframe>`;
+                return { el: embedDiv };
             } else {
-                // Standard Link Button
                 const a = document.createElement('a');
                 a.href = link.url;
                 a.className = `link-card ${link.icon ? link.icon.toLowerCase().replace(' ', '-') : 'default-link'}`;
                 a.style.animationDelay = animDelay;
-                a.target = "_blank"; // open in new tab
+                a.target = "_blank";
                 a.dataset.id = link.id;
 
-                let iconHtml = '';
+                let iconHtml = `<div class="icon-wrapper"><i class="fa-solid fa-link"></i></div>`;
                 if (link.thumbnail_url) {
                     iconHtml = `<img src="${link.thumbnail_url}" alt="${link.title}" class="link-thumbnail" />`;
                 } else if (link.icon) {
-                    // Try the FontAwesome brand icon; if it doesn't exist it silently fails
-                    // So we always layer a Google favicon fallback behind it
-                    const iconName = link.icon.toLowerCase().replace(/\s+/g, '-');
-                    // Extract domain from URL for favicon
-                    let faviconDomain = '';
-                    try {
-                        faviconDomain = new URL(link.url).hostname;
-                    } catch (e) { }
-
-                    if (faviconDomain) {
-                        // Use Google's favicon CDN as the icon image (always has the real logo)
-                        iconHtml = `<div class="icon-wrapper"><img src="https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=64" alt="${link.title}" class="favicon-icon" /></div>`;
+                    let domain = '';
+                    try { domain = new URL(link.url).hostname; } catch (e) { }
+                    if (domain) {
+                        iconHtml = `<div class="icon-wrapper"><img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${link.title}" class="favicon-icon" /></div>`;
                     } else {
-                        iconHtml = `<div class="icon-wrapper"><i class="fa-brands fa-${iconName}"></i></div>`;
+                        iconHtml = `<div class="icon-wrapper"><i class="fa-brands fa-${link.icon.toLowerCase().replace(/\s+/g, '-')}"></i></div>`;
                     }
-                } else {
-                    iconHtml = `<div class="icon-wrapper"><i class="fa-solid fa-link"></i></div>`;
                 }
 
-                a.innerHTML = `
-                    ${iconHtml}
-                    <span class="link-text">${link.title}</span>
-                    <i class="fa-solid fa-arrow-right arrow-icon"></i>
-                `;
+                a.innerHTML = `${iconHtml}<span class="link-text">${link.title}</span><i class="fa-solid fa-arrow-right arrow-icon"></i>`;
+                a.addEventListener('click', () => fetch(`/api/click/${link.id}`, { method: 'POST' }));
 
-                // Re-attach subtle mouse tracking
                 a.addEventListener('mousemove', (e) => {
                     const rect = a.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    a.style.setProperty('--mouse-x', `${x}px`);
-                    a.style.setProperty('--mouse-y', `${y}px`);
+                    a.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                    a.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
                 });
 
-                // Handle click tracking
-                a.addEventListener('click', (e) => {
-                    fetch(`/api/click/${link.id}`, { method: 'POST' });
-                });
+                return { el: a };
+            }
+        };
 
-                container.appendChild(a);
+        // Separate root links and child links
+        const rootLinks = links.filter(l => !l.parent_id);
+        const childLinks = links.filter(l => l.parent_id);
+
+        rootLinks.forEach((link, idx) => {
+            const { el, contentDiv } = createLinkElement(link, idx);
+            container.appendChild(el);
+
+            if (link.link_type === 'folder' && contentDiv) {
+                // Find children
+                const children = childLinks.filter(c => c.parent_id === link.id);
+                children.forEach((child, childIdx) => {
+                    const { el: childEl } = createLinkElement(child, childIdx);
+                    // Reset animation delay for children so they appear immediately when opened
+                    childEl.style.animationDelay = '0s';
+                    childEl.style.animation = 'none';
+                    childEl.style.opacity = '1';
+                    childEl.style.transform = 'translateY(0)';
+                    contentDiv.appendChild(childEl);
+                });
             }
         });
 
@@ -456,5 +513,129 @@ async function pollSpotify() {
     } catch (e) { }
 }
 
-// (cursor and hover preview features removed)
+// ===== GALLERY =====
+async function loadGallery() {
+    try {
+        const res = await fetch('/api/gallery');
+        if (!res.ok) return;
+        const images = await res.json();
+
+        if (images.length === 0) return;
+
+        const container = document.getElementById('gallery-container');
+        const wrapper = document.getElementById('gallery-wrapper');
+        container.style.display = 'block';
+        wrapper.innerHTML = '';
+
+        images.forEach(img => {
+            const slide = document.createElement('div');
+            slide.className = 'swiper-slide';
+            slide.style.position = 'relative';
+            slide.innerHTML = `<img src="${img.image_url}" style="width:100%; height:300px; object-fit:cover; border-radius: 14px;">
+                               ${img.caption ? `<div style="position:absolute; bottom:0; left:0; width:100%; padding:15px; background:linear-gradient(transparent, rgba(0,0,0,0.8)); color:white; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; text-align:center;">${img.caption}</div>` : ''}`;
+            wrapper.appendChild(slide);
+        });
+
+        if (typeof Swiper !== 'undefined') {
+            new Swiper('.gallery-slider', {
+                loop: false,
+                autoplay: { delay: 3000, disableOnInteraction: false },
+                pagination: { el: '.swiper-pagination', clickable: true },
+                spaceBetween: 20
+            });
+        }
+    } catch (e) { }
+}
+
+// ===== ANIMATED BACKGROUNDS =====
+function loadAnimatedBackground(type) {
+    if (type === 'none') return;
+
+    const bgContainer = document.getElementById('animated-bg');
+    bgContainer.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    bgContainer.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        if (!canvas) return;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    if (type === 'particles' || type === 'orbs') {
+        const particles = [];
+        const count = type === 'orbs' ? 30 : 100;
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vy: (Math.random() - 0.5) * (type === 'orbs' ? 0.8 : 2),
+                vx: (Math.random() - 0.5) * (type === 'orbs' ? 0.8 : 2),
+                size: (Math.random() * (type === 'orbs' ? 80 : 3)) + 1,
+                alpha: Math.random() * (type === 'orbs' ? 0.3 : 0.6)
+            });
+        }
+        function drawParticles() {
+            if (!document.getElementById('animated-bg')) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.y < -p.size) p.y = canvas.height + p.size;
+                if (p.y > canvas.height + p.size) p.y = -p.size;
+                if (p.x < -p.size) p.x = canvas.width + p.size;
+                if (p.x > canvas.width + p.size) p.x = -p.size;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+
+                if (type === 'orbs') {
+                    const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                    grd.addColorStop(0, `rgba(255, 255, 255, ${p.alpha})`);
+                    grd.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = grd;
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                    ctx.fill();
+                }
+            });
+            requestAnimationFrame(drawParticles);
+        }
+        drawParticles();
+    } else if (type === 'matrix') {
+        const chars = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789".split("");
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = [];
+        for (let x = 0; x < columns; x++) drops[x] = 1;
+
+        function drawMatrix() {
+            if (!document.getElementById('animated-bg')) return;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0F0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+            requestAnimationFrame(drawMatrix);
+        }
+        drawMatrix();
+    }
+}
 
