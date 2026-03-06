@@ -102,6 +102,24 @@ async function loadSettings() {
             vcardBtn.style.display = 'inline-block';
         }
 
+        // Announcement Banner
+        const banner = document.getElementById('announcement-banner');
+        const bannerContent = document.getElementById('banner-content');
+        const dismissKey = `banner-dismissed-${settings.banner_text}`;
+        if (banner && settings.banner_active === 'true' && !sessionStorage.getItem(dismissKey)) {
+            bannerContent.innerHTML = settings.banner_link
+                ? `<a href="${settings.banner_link}" target="_blank" style="color:inherit;text-decoration:underline;">${settings.banner_text}</a>`
+                : settings.banner_text;
+            banner.style.background = settings.banner_bg || '#4361ee';
+            banner.style.color = settings.banner_text_color || '#fff';
+            banner.style.display = 'flex';
+
+            document.getElementById('banner-dismiss').onclick = () => {
+                banner.style.display = 'none';
+                sessionStorage.setItem(dismissKey, '1');
+            };
+        }
+
     } catch (e) {
         console.error("Failed to load settings", e);
     }

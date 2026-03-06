@@ -157,7 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
             seo_image: document.getElementById('setting-seo_image').value,
             animated_background: document.getElementById('setting-animated_background').value,
             custom_css: document.getElementById('setting-custom_css').value,
-            custom_js: document.getElementById('setting-custom_js').value
+            custom_js: document.getElementById('setting-custom_js').value,
+            banner_active: document.getElementById('setting-banner_active').value,
+            banner_text: document.getElementById('setting-banner_text').value,
+            banner_link: document.getElementById('setting-banner_link').value,
+            banner_bg: document.getElementById('setting-banner_bg').value,
+            banner_text_color: document.getElementById('setting-banner_text_color').value
         };
 
         try {
@@ -244,6 +249,7 @@ function showDashboard() {
     loadSettings();
     loadGallery();
     loadChart();
+    loadVisitorCharts();
 }
 
 let allLinksData = [];
@@ -474,6 +480,11 @@ async function loadSettings() {
         if (settings.vcard_job_title) document.getElementById('setting-vcard_job_title').value = settings.vcard_job_title;
         if (settings.vcard_website) document.getElementById('setting-vcard_website').value = settings.vcard_website;
         if (settings.vcard_address) document.getElementById('setting-vcard_address').value = settings.vcard_address;
+        if (settings.banner_active) document.getElementById('setting-banner_active').value = settings.banner_active;
+        if (settings.banner_text) document.getElementById('setting-banner_text').value = settings.banner_text;
+        if (settings.banner_link) document.getElementById('setting-banner_link').value = settings.banner_link;
+        if (settings.banner_bg) document.getElementById('setting-banner_bg').value = settings.banner_bg;
+        if (settings.banner_text_color) document.getElementById('setting-banner_text_color').value = settings.banner_text_color;
 
     } catch (err) {
         console.error('Failed to load settings:', err);
@@ -660,7 +671,6 @@ async function loadChart() {
         let clicks = [];
 
         if (data.length === 0) {
-            // No data yet: generate the last 7 days with 0 clicks so the chart isn't empty
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
@@ -704,6 +714,58 @@ async function loadChart() {
                 plugins: {
                     legend: { display: false }
                 }
+            }
+        });
+    } catch (err) { }
+}
+
+let countriesChart, devicesChart;
+async function loadVisitorCharts() {
+    try {
+        const res = await fetch('/api/admin/analytics/visitors');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Countries Chart
+        const countryCtx = document.getElementById('countries-chart').getContext('2d');
+        if (countriesChart) countriesChart.destroy();
+        const countryColors = ['#4361ee', '#3a86ff', '#f72585', '#7209b7', '#4cc9f0', '#480ca8', '#b5179e', '#560bad', '#3f37c9', '#4895ef'];
+        countriesChart = new Chart(countryCtx, {
+            type: 'bar',
+            data: {
+                labels: data.countries.length > 0 ? data.countries.map(c => c.country) : ['No Data'],
+                datasets: [{
+                    label: 'Visits',
+                    data: data.countries.length > 0 ? data.countries.map(c => c.visits) : [0],
+                    backgroundColor: countryColors,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+
+        // Devices Chart
+        const deviceCtx = document.getElementById('devices-chart').getContext('2d');
+        if (devicesChart) devicesChart.destroy();
+        devicesChart = new Chart(deviceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.devices.length > 0 ? data.devices.map(d => d.device) : ['No Data'],
+                datasets: [{
+                    data: data.devices.length > 0 ? data.devices.map(d => d.visits) : [1],
+                    backgroundColor: ['#4361ee', '#f72585', '#4cc9f0'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
             }
         });
     } catch (err) { }

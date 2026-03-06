@@ -120,6 +120,33 @@ app.post('/api/visit', async (req, res) => {
         const currentCount = row ? parseInt(row.value) || 0 : 0;
         const newCount = currentCount + 1;
         await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('visit_count', ?)", [String(newCount)]);
+
+        // Detect device type from User-Agent
+        const ua = req.headers['user-agent'] || '';
+        let device = 'Desktop';
+        if (/mobile|android|iphone|ipod/i.test(ua)) device = 'Mobile';
+        else if (/ipad|tablet/i.test(ua)) device = 'Tablet';
+
+        // Get IP address
+        const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+        const today = new Date().toISOString().split('T')[0];
+
+        let country = 'Unknown';
+        try {
+            if (ip && ip !== '::1' && ip !== '127.0.0.1') {
+                const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
+                if (geoRes.ok) {
+                    const geo = await geoRes.json();
+                    country = geo.country_name || 'Unknown';
+                }
+            } else {
+                country = 'Local';
+            }
+        } catch (e) { country = 'Unknown'; }
+
+        // Log the visit
+        await dbRun('INSERT INTO visitor_logs (date, country, device) VALUES (?, ?, ?)', [today, country, device]);
+
         res.json({ count: newCount });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update visitor count' });
@@ -551,6 +578,29 @@ app.get('/api/admin/analytics/daily', requireAuth, async (req, res) => {
         res.json(analytics);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch daily analytics' });
+    }
+});
+
+// Get visitor breakdown (countries + devices)
+app.get('/api/admin/analytics/visitors', requireAuth, async (req, res) => {
+    try {
+        const countries = await dbAll(`
+            SELECT country, COUNT(*) as visits
+            FROM visitor_logs
+            GROUP BY country
+            ORDER BY visits DESC
+            LIMIT 10
+        `);
+        const devices = await dbAll(`
+            SELECT device, COUNT(*) as visits
+            FROM visitor_logs
+            GROUP BY device
+            ORDER BY visits DESC
+        `);
+        const total = await dbGet('SELECT COUNT(*) as total FROM visitor_logs');
+        res.json({ countries, devices, total: total ? total.total : 0 });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch visitor data' });
     }
 });
 

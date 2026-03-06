@@ -78,8 +78,20 @@
         <div id="analytics-tab" class="tab-content">
             <h2>Click Analytics</h2>
             
-            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
-                <canvas id="daily-clicks-chart" style="max-height: 300px;"></canvas>
+            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; height: 320px;">
+                <h3 style="color:#333; margin-bottom:10px; font-size:1rem;">📈 Daily Clicks (Last 30 Days)</h3>
+                <canvas id="daily-clicks-chart" style="max-height:260px;"></canvas>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                <div style="background:white; padding:20px; border-radius:12px;">
+                    <h3 style="color:#333; margin-bottom:10px; font-size:1rem;">🌍 Top Countries</h3>
+                    <canvas id="countries-chart" style="max-height:240px;"></canvas>
+                </div>
+                <div style="background:white; padding:20px; border-radius:12px;">
+                    <h3 style="color:#333; margin-bottom:10px; font-size:1rem;">📱 Devices</h3>
+                    <canvas id="devices-chart" style="max-height:240px;"></canvas>
+                </div>
             </div>
 
             <div class="table-container">
@@ -209,6 +221,22 @@
                     </select>
                 </div>
                 
+                <!-- Announcement Banner -->
+                <h3 style="margin-top: 20px;">📢 Announcement Banner</h3>
+                <div class="form-group row-group">
+                    <label>Enable Banner</label>
+                    <select id="setting-banner_active">
+                        <option value="false">No (Hidden)</option>
+                        <option value="true">Yes (Visible)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Banner Message</label><input type="text" id="setting-banner_text" placeholder="🔥 New video just dropped!"></div>
+                <div class="form-group"><label>Banner Link (optional)</label><input type="url" id="setting-banner_link" placeholder="https://..."></div>
+                <div class="form-group" style="display:flex; gap:16px;">
+                    <div style="flex:1;"><label>Background Color</label><input type="color" id="setting-banner_bg" style="width:100%; height:40px;"></div>
+                    <div style="flex:1;"><label>Text Color</label><input type="color" id="setting-banner_text_color" style="width:100%; height:40px;"></div>
+                </div>
+
                 <!-- Newsletter Setup -->
                 <h3 style="margin-top: 20px;">📧 Newsletter Capture</h3>
                 <div class="form-group row-group">

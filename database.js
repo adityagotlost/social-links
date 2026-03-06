@@ -62,6 +62,15 @@ function createTables() {
             UNIQUE(date, link_id)
         )`);
 
+        // Visitor Logs Table (for country/device breakdown)
+        db.run(`CREATE TABLE IF NOT EXISTS visitor_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            country TEXT DEFAULT 'Unknown',
+            device TEXT DEFAULT 'Unknown',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
         // Messages Table
         db.run(`CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,7 +130,13 @@ function createTables() {
                     ['vcard_company', ''],
                     ['vcard_job_title', ''],
                     ['vcard_website', ''],
-                    ['vcard_address', '']
+                    ['vcard_address', ''],
+                    ['banner_active', 'false'],
+                    ['banner_text', '🔥 New video just dropped! Check it out!'],
+                    ['banner_emoji', '📢'],
+                    ['banner_link', ''],
+                    ['banner_bg', '#4361ee'],
+                    ['banner_text_color', '#ffffff']
                 ];
                 // Insert new settings if they don't exist
                 db.all("SELECT key FROM settings", (err, rows) => {
