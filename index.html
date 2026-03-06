@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Social Links</title>
+    <meta name="description" content="Connect with me on social media. Links to my Instagram, Snapchat, Quora, X, Discord, Reddit, Pinterest, and GitHub.">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    
+    <main class="container">
+        <header class="profile-section">
+            <div class="avatar-wrapper">
+                <img src="https://ui-avatars.com/api/?name=User&background=random&size=150" alt="Profile Picture" id="profile-img">
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <h1 id="profile-name">@adityagotlost</h1>
+                <button id="qr-btn" class="qr-btn" title="Show QR Code"><i class="fa-solid fa-qrcode"></i></button>
+            </div>
+            <p id="profile-bio">Welcome to my little corner of the internet. Let's connect!</p>
+        </header>
+
+        <div id="links-container" class="links-section">
+            <!-- Links will be loaded here dynamically from the backend -->
+            <div style="text-align: center; color: white;">Loading links...</div>
+        </div>
+
+        <!-- Spotify Now Playing Widget -->
+        <div id="spotify-widget" style="display:none;" class="spotify-widget">
+            <a id="spotify-link" href="#" target="_blank">
+                <img id="spotify-art" src="" alt="Album Art" />
+                <div class="spotify-info">
+                    <div class="spotify-label"><i class="fa-brands fa-spotify"></i> Now Playing</div>
+                    <div id="spotify-track" class="spotify-track"></div>
+                    <div id="spotify-artist" class="spotify-artist"></div>
+                    <div class="spotify-bar"><div id="spotify-progress" class="spotify-progress"></div></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- GitHub Stats Widget -->
+        <div id="github-widget" style="display:none;" class="github-widget">
+            <img id="github-stats-img" src="" alt="GitHub Stats" />
+        </div>
+
+        <section class="contact-section">
+            <h2>Contact Me</h2>
+            <form id="contact-form" class="contact-form">
+                <div class="form-group">
+                    <input type="text" id="contact-name" name="name" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="contact-email" name="email" placeholder="Your Email" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="contact-message" name="message" placeholder="Your Message" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="submit-btn" id="contact-submit">
+                    <span class="btn-text">Send Message</span>
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+                <div id="contact-response" class="response-message"></div>
+            </form>
+        </section>
+
+        <!-- Visitor Counter -->
+        <div id="visitor-counter" class="visitor-counter"></div>
+    </main>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 300px; text-align: center;">
+            <span class="close" id="qr-close">&times;</span>
+            <h2>Scan to Connect</h2>
+            <div id="qrcode" style="margin: 20px auto; display: flex; justify-content: center;"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

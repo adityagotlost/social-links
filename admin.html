@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Dashboard Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+    <!-- SortableJS for drag-and-drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+
+    <!-- Login Container -->
+    <div id="login-container" class="container">
+        <div class="login-card">
+            <h2>Admin Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <div id="login-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard Container (Hidden by default) -->
+    <div id="dashboard-container" class="container" style="display: none;">
+        <header class="dashboard-header">
+            <h1>Dashboard</h1>
+            <button id="logout-btn" class="btn btn-danger">Logout</button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-target="links-tab">Links</button>
+            <button class="tab-btn" data-target="analytics-tab">Analytics</button>
+            <button class="tab-btn" data-target="messages-tab">Messages</button>
+            <button class="tab-btn" data-target="settings-tab">Settings</button>
+        </div>
+
+        <!-- Links Management -->
+        <div id="links-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Manage Links</h2>
+                <button class="btn btn-primary" onclick="openModal()">Add New Link</button>
+            </div>
+            <div class="table-container">
+                <table id="links-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Icon</th>
+                            <th>Title</th>
+                            <th>URL</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="links-tbody">
+                        <!-- Links loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div id="analytics-tab" class="tab-content">
+            <h2>Click Analytics</h2>
+            <div class="table-container">
+                <table id="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Link</th>
+                            <th>Clicks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-tbody">
+                        <!-- Analytics loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages-tab" class="tab-content">
+            <h2>Contact Messages</h2>
+            <div id="messages-list" class="messages-grid">
+                <!-- Messages loaded here -->
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div id="settings-tab" class="tab-content">
+            <h2>Global Settings & SEO</h2>
+            <form id="settings-form" class="settings-form">
+                <div class="form-group">
+                    <label>Theme</label>
+                    <select id="setting-theme">
+                        <option value="default">Default (Dark Blue)</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="glass">Glassmorphism</option>
+                        <option value="neon">Neon</option>
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="gradient">Gradient</option>
+                        <option value="sunrise">Sunrise</option>
+                        <option value="minimal-white">Minimal White</option>
+                    </select>
+                </div>
+                <!-- Existing Settings -->
+                <div class="form-group"><label>Profile Name</label><input type="text" id="setting-profile_name"></div>
+                <div class="form-group"><label>Profile Image URL</label><input type="text" id="setting-profile_img_url"></div>
+                <div class="form-group"><label>GitHub Username</label><input type="text" id="setting-github_username" placeholder="e.g. adityagotlost"></div>
+                <!-- SEO Settings -->
+                <h3>SEO & Social Sharing Preview</h3>
+                <div class="form-group">
+                    <label>SEO Title (displays in iMessage/Discord/Twitter)</label>
+                    <input type="text" id="setting-seo_title">
+                </div>
+                <div class="form-group">
+                    <label>SEO Description</label>
+                    <textarea id="setting-seo_description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>SEO Preview Image</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="setting-seo_image" placeholder="/uploads/...">
+                        <input type="file" id="seo-file-upload" accept="image/*" style="display:none;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('seo-file-upload').click()">Upload</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:20px;">Save Settings</button>
+
+                <!-- Spotify Connect -->
+                <hr style="margin: 24px 0; border-color: var(--border);">
+                <h3>🎵 Spotify Now Playing</h3>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">Connect your Spotify account to show what you're currently listening to on your profile.</p>
+                <a href="/api/auth/spotify" class="btn btn-primary" style="background:#1DB954; display:inline-block; width:auto; padding: 0.6rem 1.2rem; text-decoration:none;">
+                    <i class="fa-brands fa-spotify"></i> Connect Spotify
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Link Modal -->
+    <div id="link-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title">Add Link</h2>
+            <form id="link-form">
+                <input type="hidden" id="link-id">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="link-title" required>
+                </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" id="link-url" required>
+                    <small id="url-hint" style="color:var(--text); opacity:0.7;"></small>
+                </div>
+                <div class="form-group">
+                    <label>FontAwesome Icon Name (e.g., 'instagram', 'github')</label>
+                    <input type="text" id="link-icon">
+                </div>
+                
+                <div class="form-row" style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Link Type</label>
+                        <select id="link-type">
+                            <option value="standard">Standard Button</option>
+                            <option value="embed">Embed (Video/Audio/Custom)</option>
+                            <option value="spotify-song">Spotify Fav Song</option>
+                            <option value="spotify-playlist">Spotify Playlist</option>
+                        </select>
+                    </div>
+                     <div class="form-group" style="flex: 1;">
+                        <label>Thumbnail / Custom Image (Optional)</label>
+                        <div style="display:flex; gap:5px;">
+                             <input type="text" id="link-thumbnail" placeholder="/uploads/...">
+                             <input type="file" id="thumbnail-upload" accept="image/*" style="display:none;">
+                             <button type="button" class="btn" style="padding: 0.5rem;" onclick="document.getElementById('thumbnail-upload').click()">📁</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group row-group">
+                    <label>Active</label>
+                    <input type="checkbox" id="link-active" checked>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Link</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Environment variables — NEVER commit these
+.env
+
+# Node modules
+node_modules/
+
+# Database file (contains your data)
+*.db
+*.sqlite
+
+# Uploaded files
+uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
