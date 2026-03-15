@@ -7,22 +7,33 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const multer = require('multer');
-const { dbRun, dbGet, dbAll } = require('./database');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { MongoStore } = require('connect-mongo');
+const { 
+    connectDB, Link, Gallery, Analytics, DailyAnalytics, VisitorLog, 
+    Message, Subscriber, AnimeList, User, Setting 
+} = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure Multer for File Uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const dir = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir);
-        }
-        cb(null, dir);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname)); // Appends original extension
+// Connect to MongoDB
+connectDB();
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Multer for Cloudinary Uploads
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'social-links-uploads',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
     }
 });
 const upload = multer({ storage: storage });
@@ -33,12 +44,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session middleware for admin login
-app.use(session({
+const sessionOptions = {
     secret: process.env.SESSION_SECRET || 'super-secret-key-12345',
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 1 day
-}));
+};
+if (process.env.MONGODB_URI) {
+    sessionOptions.store = MongoStore.create({ mongoUrl: process.env.MONGODB_URI });
+}
+app.use(session(sessionOptions));
 
 // Setup static files to serve from current directory directly
 const staticPaths = ['/admin.html', '/admin.js', '/admin.css', '/script.js', '/style.css'];
@@ -55,13 +70,13 @@ app.get(['/', '/index.html'], async (req, res) => {
         let htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
         // Fetch SEO Settings from DB
-        const settingsRows = await dbAll('SELECT * FROM settings');
+        const settingsRows = await Setting.find({});
         const settings = {};
         settingsRows.forEach(r => settings[r.key] = r.value);
 
         const seoTitle = settings.seo_title || 'My Social Links';
         const seoDesc = settings.seo_description || 'Welcome to my corner of the internet!';
-        const seoImage = settings.seo_image ? `http://${req.headers.host}${settings.seo_image}` : '';
+        const seoImage = settings.seo_image ? (settings.seo_image.startsWith('http') ? settings.seo_image : `http://${req.headers.host}${settings.seo_image}`) : '';
 
         // Inject Meta Tags before </head>
         const metaTags = `
@@ -90,12 +105,8 @@ app.get(['/', '/index.html'], async (req, res) => {
 // Get all active links
 app.get('/api/links', async (req, res) => {
     try {
-        const links = await dbAll(`
-        SELECT * FROM links 
-            WHERE is_active = 1
-            ORDER BY display_order ASC
-        `);
-        res.json(links);
+        const links = await Link.find({ is_active: true }).sort('display_order');
+        res.json(links.map(l => ({ ...l.toObject(), id: l._id })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch links' });
     }
@@ -104,7 +115,7 @@ app.get('/api/links', async (req, res) => {
 // Get public settings for themes
 app.get('/api/settings', async (req, res) => {
     try {
-        const settingsRows = await dbAll('SELECT * FROM settings');
+        const settingsRows = await Setting.find({});
         const settings = {};
         settingsRows.forEach(r => settings[r.key] = r.value);
         res.json(settings);
@@ -116,10 +127,10 @@ app.get('/api/settings', async (req, res) => {
 // Visitor Counter
 app.post('/api/visit', async (req, res) => {
     try {
-        const row = await dbGet("SELECT value FROM settings WHERE key = 'visit_count'");
+        const row = await Setting.findOne({ key: 'visit_count' });
         const currentCount = row ? parseInt(row.value) || 0 : 0;
         const newCount = currentCount + 1;
-        await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('visit_count', ?)", [String(newCount)]);
+        await Setting.findOneAndUpdate({ key: 'visit_count' }, { value: String(newCount) }, { upsert: true });
 
         // Detect device type from User-Agent
         const ua = req.headers['user-agent'] || '';
@@ -145,7 +156,7 @@ app.post('/api/visit', async (req, res) => {
         } catch (e) { country = 'Unknown'; }
 
         // Log the visit
-        await dbRun('INSERT INTO visitor_logs (date, country, device) VALUES (?, ?, ?)', [today, country, device]);
+        await VisitorLog.create({ date: today, country, device });
 
         res.json({ count: newCount });
     } catch (err) {
@@ -157,24 +168,27 @@ app.post('/api/visit', async (req, res) => {
 app.post('/api/click/:id', async (req, res) => {
     const linkId = req.params.id;
     try {
-        const link = await dbGet('SELECT * FROM links WHERE id = ?', [linkId]);
+        const link = await Link.findById(linkId);
         if (!link) return res.status(404).json({ error: 'Link not found' });
 
-        const analytics = await dbGet('SELECT * FROM analytics WHERE link_id = ?', [linkId]);
+        const analytics = await Analytics.findOne({ link_id: linkId });
 
         if (analytics) {
-            await dbRun('UPDATE analytics SET click_count = click_count + 1, last_clicked = CURRENT_TIMESTAMP WHERE link_id = ?', [linkId]);
+            analytics.click_count += 1;
+            analytics.last_clicked = new Date();
+            await analytics.save();
         } else {
-            await dbRun('INSERT INTO analytics (link_id, click_count, last_clicked) VALUES (?, 1, CURRENT_TIMESTAMP)', [linkId]);
+            await Analytics.create({ link_id: linkId, click_count: 1, last_clicked: new Date() });
         }
 
         // Add to daily analytics
         const today = new Date().toISOString().split('T')[0];
-        const daily = await dbGet('SELECT * FROM daily_analytics WHERE date = ? AND link_id = ?', [today, linkId]);
+        const daily = await DailyAnalytics.findOne({ date: today, link_id: linkId });
         if (daily) {
-            await dbRun('UPDATE daily_analytics SET clicks = clicks + 1 WHERE id = ?', [daily.id]);
+            daily.clicks += 1;
+            await daily.save();
         } else {
-            await dbRun('INSERT INTO daily_analytics (date, link_id, clicks) VALUES (?, ?, 1)', [today, linkId]);
+            await DailyAnalytics.create({ date: today, link_id: linkId, clicks: 1 });
         }
 
         res.json({ success: true });
@@ -191,11 +205,10 @@ app.post('/api/contact', async (req, res) => {
     }
 
     try {
-        await dbRun('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)', [name, email, message]);
+        await Message.create({ name, email, message });
 
         // Send Gmail notification if credentials are configured
         if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-            const nodemailer = require('nodemailer');
             const transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
@@ -219,9 +232,6 @@ app.post('/api/contact', async (req, res) => {
                     </div>
                 `
             });
-        } else {
-            console.log('\n--- EMAIL NOT CONFIGURED ---');
-            console.log('Add GMAIL_USER and GMAIL_APP_PASSWORD to .env to receive email notifications.');
         }
 
         res.json({ success: true, message: 'Message sent successfully!' });
@@ -239,10 +249,10 @@ app.post('/api/subscribe', async (req, res) => {
     }
 
     try {
-        await dbRun('INSERT INTO subscribers (email) VALUES (?)', [email]);
+        await Subscriber.create({ email });
         res.json({ success: true, message: 'Successfully subscribed!' });
     } catch (err) {
-        if (err.message && err.message.includes('UNIQUE constraint failed')) {
+        if (err.code === 11000) {
             res.status(400).json({ error: 'This email is already subscribed' });
         } else {
             console.error(err);
@@ -254,7 +264,7 @@ app.post('/api/subscribe', async (req, res) => {
 // Download vCard
 app.get('/api/vcard', async (req, res) => {
     try {
-        const settingsRows = await dbAll('SELECT * FROM settings');
+        const settingsRows = await Setting.find({});
         const settings = {};
         settingsRows.forEach(r => settings[r.key] = r.value);
 
@@ -307,12 +317,12 @@ const requireAuth = (req, res, next) => {
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const user = await dbGet('SELECT * FROM users WHERE username = ?', [username]);
+        const user = await User.findOne({ username });
         if (!user) return res.status(401).json({ error: 'Invalid username or password' });
 
         const match = await bcrypt.compare(password, user.password_hash);
         if (match) {
-            req.session.adminId = user.id;
+            req.session.adminId = user._id;
             res.json({ success: true, message: 'Logged in successfully' });
         } else {
             res.status(401).json({ error: 'Invalid username or password' });
@@ -342,21 +352,38 @@ app.post('/api/admin/upload', requireAuth, upload.single('file'), (req, res) => 
     if (!req.file) {
         return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
-    // Return the public URL for the file
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // Return the Cloudinary URL
+    const fileUrl = req.file.path;
     res.json({ success: true, url: fileUrl });
 });
 
 // Get all links (including inactive) with click analytics
 app.get('/api/admin/links', requireAuth, async (req, res) => {
     try {
-        const query = `
-            SELECT l.*, IFNULL(a.click_count, 0) as clicks
-            FROM links l
-            LEFT JOIN analytics a ON l.id = a.link_id
-            ORDER BY l.display_order ASC
-            `;
-        const links = await dbAll(query);
+        const links = await Link.aggregate([
+            {
+                $lookup: {
+                    from: 'analytics',
+                    localField: '_id',
+                    foreignField: 'link_id',
+                    as: 'analyticsData'
+                }
+            },
+            {
+                $addFields: {
+                    clicks: { 
+                        $ifNull: [ { $arrayElemAt: ['$analyticsData.click_count', 0] }, 0 ] 
+                    },
+                    id: '$_id'
+                }
+            },
+            {
+                $project: {
+                    analyticsData: 0
+                }
+            },
+            { $sort: { display_order: 1 } }
+        ]);
         res.json(links);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch admin links' });
@@ -393,15 +420,15 @@ app.post('/api/admin/links', requireAuth, async (req, res) => {
         }
 
         // Get max order
-        const row = await dbGet('SELECT MAX(display_order) as maxOrder FROM links');
-        const nextOrder = (row && row.maxOrder !== null) ? row.maxOrder + 1 : 1;
+        const lastLink = await Link.findOne().sort('-display_order');
+        const nextOrder = lastLink ? lastLink.display_order + 1 : 1;
 
-        const result = await dbRun(
-            `INSERT INTO links (title, url, icon, display_order, is_active, thumbnail_url, link_type, embed_url, parent_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, url, icon, nextOrder, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null, parent_id || null]
-        );
-        res.json({ success: true, id: result.id });
+        const link = await Link.create({
+            title, url, icon, display_order: nextOrder, is_active: is_active ? true : false,
+            thumbnail_url: thumbnail_url || null, link_type: link_type || 'standard',
+            embed_url: embed_url || null, parent_id: parent_id || null
+        });
+        res.json({ success: true, id: link._id });
     } catch (err) {
         res.status(500).json({ error: 'Failed to create link' });
     }
@@ -412,7 +439,7 @@ app.put('/api/admin/links/reorder', requireAuth, async (req, res) => {
     const { orderedIds } = req.body;
     try {
         for (let i = 0; i < orderedIds.length; i++) {
-            await dbRun('UPDATE links SET display_order = ? WHERE id = ?', [i + 1, orderedIds[i]]);
+            await Link.findByIdAndUpdate(orderedIds[i], { display_order: i + 1 });
         }
         res.json({ success: true });
     } catch (err) {
@@ -436,12 +463,11 @@ app.put('/api/admin/links/:id', requireAuth, async (req, res) => {
             }
         }
 
-        await dbRun(
-            `UPDATE links SET title = ?, url = ?, icon = ?, is_active = ?, 
-             thumbnail_url = ?, link_type = ?, embed_url = ?, parent_id = ? 
-             WHERE id = ?`,
-            [title, url, icon, is_active ? 1 : 0, thumbnail_url || null, link_type || 'standard', embed_url || null, parent_id || null, req.params.id]
-        );
+        await Link.findByIdAndUpdate(req.params.id, {
+            title, url, icon, is_active: is_active ? true : false,
+            thumbnail_url: thumbnail_url || null, link_type: link_type || 'standard',
+            embed_url: embed_url || null, parent_id: parent_id || null
+        });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update link' });
@@ -451,7 +477,10 @@ app.put('/api/admin/links/:id', requireAuth, async (req, res) => {
 // Delete a link
 app.delete('/api/admin/links/:id', requireAuth, async (req, res) => {
     try {
-        await dbRun('DELETE FROM links WHERE id = ?', [req.params.id]);
+        await Link.findByIdAndDelete(req.params.id);
+        // Also cleanup analytics points
+        await Analytics.deleteMany({ link_id: req.params.id });
+        await DailyAnalytics.deleteMany({ link_id: req.params.id });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete link' });
@@ -461,8 +490,8 @@ app.delete('/api/admin/links/:id', requireAuth, async (req, res) => {
 // Get all messages
 app.get('/api/admin/messages', requireAuth, async (req, res) => {
     try {
-        const messages = await dbAll('SELECT * FROM messages ORDER BY created_at DESC');
-        res.json(messages);
+        const messages = await Message.find().sort('-created_at');
+        res.json(messages.map(m => ({ ...m.toObject(), id: m._id })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch messages' });
     }
@@ -471,8 +500,8 @@ app.get('/api/admin/messages', requireAuth, async (req, res) => {
 // Get all subscribers
 app.get('/api/admin/subscribers', requireAuth, async (req, res) => {
     try {
-        const subscribers = await dbAll('SELECT * FROM subscribers ORDER BY created_at DESC');
-        res.json(subscribers);
+        const subscribers = await Subscriber.find().sort('-created_at');
+        res.json(subscribers.map(s => ({ ...s.toObject(), id: s._id })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch subscribers' });
     }
@@ -481,7 +510,7 @@ app.get('/api/admin/subscribers', requireAuth, async (req, res) => {
 // Delete a subscriber
 app.delete('/api/admin/subscribers/:id', requireAuth, async (req, res) => {
     try {
-        await dbRun('DELETE FROM subscribers WHERE id = ?', [req.params.id]);
+        await Subscriber.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete subscriber' });
@@ -492,8 +521,8 @@ app.delete('/api/admin/subscribers/:id', requireAuth, async (req, res) => {
 
 app.get('/api/gallery', async (req, res) => {
     try {
-        const images = await dbAll('SELECT * FROM gallery ORDER BY display_order ASC');
-        res.json(images);
+        const images = await Gallery.find().sort('display_order');
+        res.json(images.map(img => ({ ...img.toObject(), id: img._id })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch gallery' });
     }
@@ -501,8 +530,8 @@ app.get('/api/gallery', async (req, res) => {
 
 app.get('/api/admin/gallery', requireAuth, async (req, res) => {
     try {
-        const images = await dbAll('SELECT * FROM gallery ORDER BY display_order ASC');
-        res.json(images);
+        const images = await Gallery.find().sort('display_order');
+        res.json(images.map(img => ({ ...img.toObject(), id: img._id })));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch gallery' });
     }
@@ -512,10 +541,10 @@ app.post('/api/admin/gallery', requireAuth, async (req, res) => {
     const { image_url, caption } = req.body;
     if (!image_url) return res.status(400).json({ error: 'Image URL is required' });
     try {
-        const row = await dbGet('SELECT MAX(display_order) as maxOrder FROM gallery');
-        const nextOrder = (row && row.maxOrder !== null) ? row.maxOrder + 1 : 1;
-        const result = await dbRun('INSERT INTO gallery (image_url, caption, display_order) VALUES (?, ?, ?)', [image_url, caption, nextOrder]);
-        res.json({ success: true, id: result.id });
+        const lastImage = await Gallery.findOne().sort('-display_order');
+        const nextOrder = lastImage ? lastImage.display_order + 1 : 1;
+        const result = await Gallery.create({ image_url, caption, display_order: nextOrder });
+        res.json({ success: true, id: result._id });
     } catch (err) {
         res.status(500).json({ error: 'Failed to add image' });
     }
@@ -525,7 +554,7 @@ app.put('/api/admin/gallery/reorder', requireAuth, async (req, res) => {
     const { orderedIds } = req.body;
     try {
         for (let i = 0; i < orderedIds.length; i++) {
-            await dbRun('UPDATE gallery SET display_order = ? WHERE id = ?', [i + 1, orderedIds[i]]);
+            await Gallery.findByIdAndUpdate(orderedIds[i], { display_order: i + 1 });
         }
         res.json({ success: true });
     } catch (err) {
@@ -535,7 +564,7 @@ app.put('/api/admin/gallery/reorder', requireAuth, async (req, res) => {
 
 app.delete('/api/admin/gallery/:id', requireAuth, async (req, res) => {
     try {
-        await dbRun('DELETE FROM gallery WHERE id = ?', [req.params.id]);
+        await Gallery.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete image' });
@@ -547,7 +576,7 @@ app.put('/api/admin/settings', requireAuth, async (req, res) => {
     const settings = req.body;
     try {
         for (const [key, value] of Object.entries(settings)) {
-            await dbRun('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
+            await Setting.findOneAndUpdate({ key }, { value }, { upsert: true });
         }
         res.json({ success: true });
     } catch (err) {
@@ -561,20 +590,22 @@ app.post('/api/admin/upload', requireAuth, upload.single('file'), (req, res) => 
         return res.status(400).json({ error: 'No file uploaded' });
     }
     // Return relative URL for storage
-    res.json({ success: true, url: '/uploads/' + req.file.filename });
+    res.json({ success: true, url: req.file.path });
 });
 
 // Get daily analytics for chart
 app.get('/api/admin/analytics/daily', requireAuth, async (req, res) => {
     try {
-        const query = `
-            SELECT date, SUM(clicks) as clicks
-            FROM daily_analytics
-            WHERE date >= date('now', '-30 days')
-            GROUP BY date
-            ORDER BY date ASC
-            `;
-        const analytics = await dbAll(query);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+        const analytics = await DailyAnalytics.aggregate([
+            { $match: { date: { $gte: thirtyDaysAgoStr } } },
+            { $group: { _id: '$date', clicks: { $sum: '$clicks' } } },
+            { $sort: { _id: 1 } },
+            { $project: { _id: 0, date: '$_id', clicks: 1 } }
+        ]);
         res.json(analytics);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch daily analytics' });
@@ -584,22 +615,21 @@ app.get('/api/admin/analytics/daily', requireAuth, async (req, res) => {
 // Get visitor breakdown (countries + devices)
 app.get('/api/admin/analytics/visitors', requireAuth, async (req, res) => {
     try {
-        const countries = await dbAll(`
-            SELECT country, COUNT(*) as visits
-            FROM visitor_logs
-            GROUP BY country
-            ORDER BY visits DESC
-            LIMIT 10
-        `);
-        const devices = await dbAll(`
-            SELECT device, COUNT(*) as visits
-            FROM visitor_logs
-            GROUP BY device
-            ORDER BY visits DESC
-        `);
-        const total = await dbGet('SELECT COUNT(*) as total FROM visitor_logs');
-        res.json({ countries, devices, total: total ? total.total : 0 });
+        const countries = await VisitorLog.aggregate([
+            { $group: { _id: '$country', visits: { $sum: 1 } } },
+            { $sort: { visits: -1 } },
+            { $limit: 10 },
+            { $project: { _id: 0, country: '$_id', visits: 1 } }
+        ]);
+        const devices = await VisitorLog.aggregate([
+            { $group: { _id: '$device', visits: { $sum: 1 } } },
+            { $sort: { visits: -1 } },
+            { $project: { _id: 0, device: '$_id', visits: 1 } }
+        ]);
+        const total = await VisitorLog.countDocuments();
+        res.json({ countries, devices, total });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Failed to fetch visitor data' });
     }
 });
@@ -638,8 +668,8 @@ app.get('/api/auth/spotify/callback', requireAuth, async (req, res) => {
         });
         const data = await response.json();
         if (data.refresh_token) {
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('spotify_refresh_token', ?)", [data.refresh_token]);
-            await dbRun("INSERT OR REPLACE INTO settings (key, value) VALUES ('spotify_access_token', ?)", [data.access_token]);
+            await Setting.findOneAndUpdate({ key: 'spotify_refresh_token' }, { value: data.refresh_token }, { upsert: true });
+            await Setting.findOneAndUpdate({ key: 'spotify_access_token' }, { value: data.access_token }, { upsert: true });
             res.redirect('/admin.html?spotify=connected');
         } else {
             res.status(400).send('Failed to get Spotify tokens: ' + JSON.stringify(data));
@@ -655,7 +685,7 @@ app.get('/api/spotify/now-playing', async (req, res) => {
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
     try {
-        const rtRow = await dbGet("SELECT value FROM settings WHERE key = 'spotify_refresh_token'");
+        const rtRow = await Setting.findOne({ key: 'spotify_refresh_token' });
         if (!rtRow) return res.json({ playing: false });
 
         // Refresh the access token
@@ -696,7 +726,106 @@ app.get('/api/spotify/now-playing', async (req, res) => {
     }
 });
 
+// ===== AI CHATBOT =====
+app.post('/api/chat', async (req, res) => {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
+
+    try {
+        // Get persona from settings
+        const settingsRows = await Setting.find({});
+        const settings = {};
+        settingsRows.forEach(r => settings[r.key] = r.value);
+        const persona = settings.chatbot_persona || 'You are a friendly assistant on a personal social links page.';
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [
+                        { role: 'user', parts: [{ text: persona + '\n\nUser: ' + message }] }
+                    ]
+                })
+            }
+        );
+        const data = await response.json();
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+        res.json({ reply });
+    } catch (err) {
+        console.error('Chat error:', err);
+        res.status(500).json({ error: 'Failed to get AI response' });
+    }
+});
+
+// ===== ANIME LIST API =====
+
+// Public: Get all anime
+app.get('/api/anime', async (req, res) => {
+    try {
+        const anime = await AnimeList.find().sort('display_order');
+        res.json(anime.map(a => ({ ...a.toObject(), id: a._id })));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch anime list' });
+    }
+});
+
+// Admin: Get all anime
+app.get('/api/admin/anime', requireAuth, async (req, res) => {
+    try {
+        const anime = await AnimeList.find().sort('display_order');
+        res.json(anime.map(a => ({ ...a.toObject(), id: a._id })));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch anime list' });
+    }
+});
+
+// Admin: Add anime
+app.post('/api/admin/anime', requireAuth, async (req, res) => {
+    const { title, status, score, image_url, mal_id } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    try {
+        const lastAnime = await AnimeList.findOne().sort('-display_order');
+        const nextOrder = lastAnime ? lastAnime.display_order + 1 : 1;
+        const result = await AnimeList.create({
+            title, status: status || 'watching', score: score || 0,
+            image_url: image_url || null, mal_id: mal_id || null, display_order: nextOrder
+        });
+        res.json({ success: true, id: result._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to add anime' });
+    }
+});
+
+// Admin: Update anime
+app.put('/api/admin/anime/:id', requireAuth, async (req, res) => {
+    const { title, status, score, image_url, mal_id } = req.body;
+    try {
+        await AnimeList.findByIdAndUpdate(req.params.id, {
+            title, status, score, image_url: image_url || null, mal_id: mal_id || null
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update anime' });
+    }
+});
+
+// Admin: Delete anime
+app.delete('/api/admin/anime/:id', requireAuth, async (req, res) => {
+    try {
+        await AnimeList.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete anime' });
+    }
+});
+
 // Global Error Handler
+
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal Server Error' });

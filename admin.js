@@ -248,6 +248,7 @@ function showDashboard() {
     loadSubscribers();
     loadSettings();
     loadGallery();
+    loadAnime();
     loadChart();
     loadVisitorCharts();
 }
@@ -302,7 +303,7 @@ async function loadLinksAndAnalytics() {
                 </td>
                 <td>
                     <button class="btn btn-sm btn-primary" onclick='editLink(${JSON.stringify(link).replace(/'/g, "&#39;")})'>Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteLink(${link.id})">Delete</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteLink('${link.id}')">Delete</button>
                 </td>
             `;
             linksTbody.appendChild(tr);
@@ -336,7 +337,7 @@ function initSortable() {
             onEnd: async function () {
                 // Read current order of IDs
                 const rows = Array.from(linksTbody.querySelectorAll('tr'));
-                const orderedIds = rows.map(r => parseInt(r.dataset.id));
+                const orderedIds = rows.map(r => r.dataset.id);
 
                 // Save new order to backend
                 try {
@@ -413,7 +414,7 @@ async function loadSubscribers() {
                 <td><strong>${sub.email}</strong></td>
                 <td>${date}</td>
                 <td>
-                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriber(${sub.id})">Remove</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSubscriber('${sub.id}')">Remove</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -485,6 +486,11 @@ async function loadSettings() {
         if (settings.banner_link) document.getElementById('setting-banner_link').value = settings.banner_link;
         if (settings.banner_bg) document.getElementById('setting-banner_bg').value = settings.banner_bg;
         if (settings.banner_text_color) document.getElementById('setting-banner_text_color').value = settings.banner_text_color;
+
+        // Chatbot settings
+        if (settings.chatbot_active) document.getElementById('setting-chatbot_active').value = settings.chatbot_active;
+        if (settings.chatbot_name) document.getElementById('setting-chatbot_name').value = settings.chatbot_name;
+        if (settings.chatbot_persona) document.getElementById('setting-chatbot_persona').value = settings.chatbot_persona;
 
     } catch (err) {
         console.error('Failed to load settings:', err);
@@ -594,7 +600,7 @@ async function loadGallery() {
                 <td><img src="${img.image_url}" alt="${img.caption || ''}" style="height: 50px; border-radius: 5px;"></td>
                 <td>${img.caption || '<em>None</em>'}</td>
                 <td>
-                    <button class="btn btn-sm btn-danger" onclick="deleteGalleryImage(${img.id})">Delete</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteGalleryImage('${img.id}')">Delete</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -606,7 +612,7 @@ async function loadGallery() {
                 animation: 150,
                 onEnd: async function () {
                     const rows = Array.from(tbody.querySelectorAll('tr'));
-                    const orderedIds = rows.map(r => parseInt(r.dataset.id));
+                    const orderedIds = rows.map(r => r.dataset.id);
                     try {
                         await fetch('/api/admin/gallery/reorder', {
                             method: 'PUT',
@@ -770,3 +776,128 @@ async function loadVisitorCharts() {
         });
     } catch (err) { }
 }
+
+// ===== ANIME ADMIN =====
+async function loadAnime() {
+    try {
+        const res = await fetch('/api/admin/anime');
+        if (!res.ok) return;
+        const list = await res.json();
+        const tbody = document.getElementById('anime-tbody');
+        tbody.innerHTML = '';
+
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No anime yet. Click "Add Anime" to get started.</td></tr>';
+            return;
+        }
+
+        list.forEach(anime => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${anime.image_url ? `<img src="${anime.image_url}" style="width:40px; border-radius:6px;">` : '—'}</td>
+                <td><strong>${anime.title}</strong></td>
+                <td><span style="text-transform:capitalize;">${anime.status.replace('_', ' ')}</span></td>
+                <td>${anime.score > 0 ? '⭐'.repeat(Math.min(anime.score, 5)) + ` (${anime.score})` : '—'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick='editAnime(${JSON.stringify(anime).replace(/'/g, "&#39;")})'>Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAnime('${anime.id}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) { console.error(e); }
+}
+
+window.openAnimeModal = function () {
+    document.getElementById('anime-modal-title').textContent = 'Add Anime';
+    document.getElementById('anime-form').reset();
+    document.getElementById('anime-id').value = '';
+    document.getElementById('anime-modal').style.display = 'block';
+};
+
+window.closeAnimeModal = function () {
+    document.getElementById('anime-modal').style.display = 'none';
+};
+
+window.editAnime = function (anime) {
+    document.getElementById('anime-modal-title').textContent = 'Edit Anime';
+    document.getElementById('anime-id').value = anime.id;
+    document.getElementById('anime-title').value = anime.title;
+    document.getElementById('anime-image-url').value = anime.image_url || '';
+    document.getElementById('anime-status').value = anime.status;
+    document.getElementById('anime-score').value = anime.score;
+    document.getElementById('anime-modal').style.display = 'block';
+};
+
+window.deleteAnime = async function (id) {
+    if (!confirm('Delete this anime?')) return;
+    const res = await fetch(`/api/admin/anime/${id}`, { method: 'DELETE' });
+    if (res.ok) loadAnime();
+};
+
+document.getElementById('anime-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('anime-id').value;
+    let image_url = document.getElementById('anime-image-url').value.trim();
+    const title = document.getElementById('anime-title').value.trim();
+
+    // Auto-fetch cover from Jikan if not provided
+    if (!image_url && title) {
+        try {
+            const jikanRes = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=1`);
+            const jikanData = await jikanRes.json();
+            if (jikanData.data && jikanData.data.length > 0) {
+                image_url = jikanData.data[0].images?.jpg?.image_url || '';
+            }
+        } catch (e) { }
+    }
+
+    const payload = {
+        title,
+        status: document.getElementById('anime-status').value,
+        score: parseInt(document.getElementById('anime-score').value) || 0,
+        image_url: image_url || null,
+        mal_id: null
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const endpoint = id ? `/api/admin/anime/${id}` : '/api/admin/anime';
+
+    const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        closeAnimeModal();
+        loadAnime();
+    } else {
+        alert('Failed to save anime.');
+    }
+});
+
+// ===== CHATBOT SETTINGS =====
+document.getElementById('chatbot-settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const settings = {
+        chatbot_active: document.getElementById('setting-chatbot_active').value,
+        chatbot_name: document.getElementById('setting-chatbot_name').value,
+        chatbot_persona: document.getElementById('setting-chatbot_persona').value
+    };
+
+    const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+    });
+
+    if (res.ok) {
+        const msg = document.getElementById('chatbot-save-msg');
+        msg.style.display = 'block';
+        setTimeout(() => msg.style.display = 'none', 3000);
+    } else {
+        alert('Error saving chatbot settings');
+    }
+});
+

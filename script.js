@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
     loadGallery();
     pollSpotify();
     setInterval(pollSpotify, 30000);
+    loadAnimeList();
+    initChatbot();
+    initSnakeGame();
 });
 
 async function loadSettings() {
@@ -118,6 +121,26 @@ async function loadSettings() {
                 banner.style.display = 'none';
                 sessionStorage.setItem(dismissKey, '1');
             };
+        }
+
+        // Chatbot
+        const chatbotWidget = document.getElementById('chatbot-widget');
+        if (chatbotWidget && settings.chatbot_active === 'true') {
+            chatbotWidget.style.display = 'flex';
+            const nameEl = document.getElementById('chatbot-name');
+            if (nameEl && settings.chatbot_name) nameEl.textContent = settings.chatbot_name;
+        }
+
+        // Anime section
+        if (settings.anime_section_active === 'true') {
+            const animeSection = document.getElementById('anime-section');
+            if (animeSection) animeSection.style.display = 'block';
+        }
+
+        // Game button
+        const gameLauncher = document.getElementById('game-launcher');
+        if (gameLauncher && settings.game_active !== 'false') {
+            gameLauncher.style.display = 'block';
         }
 
     } catch (e) {
@@ -663,3 +686,247 @@ function loadAnimatedBackground(type) {
     }
 }
 
+// ===== ANIME WATCHLIST =====
+async function loadAnimeList() {
+    try {
+        const res = await fetch('/api/anime');
+        if (!res.ok) return;
+        const animeList = await res.json();
+        if (!animeList.length) return;
+
+        const container = document.getElementById('anime-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        animeList.forEach(anime => {
+            const card = document.createElement('div');
+            card.className = 'anime-card';
+
+            const img = anime.image_url
+                ? `<img src="${anime.image_url}" alt="${anime.title}" loading="lazy" onerror="this.style.display='none'">`
+                : `<div style="width:100%; aspect-ratio:2/3; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; font-size:2rem;">🎌</div>`;
+
+            const statusLabel = anime.status.replace('_', ' ');
+            const stars = anime.score > 0 ? '⭐'.repeat(Math.min(anime.score, 5)) : '';
+
+            card.innerHTML = `
+                ${img}
+                <div class="anime-card-body">
+                    <div class="anime-card-title" title="${anime.title}">${anime.title}</div>
+                    <span class="anime-status-badge ${anime.status}">${statusLabel}</span>
+                    ${stars ? `<div class="anime-score">${stars}</div>` : ''}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (e) { console.error('loadAnimeList error', e); }
+}
+
+// ===== AI CHATBOT =====
+function initChatbot() {
+    const bubble = document.getElementById('chatbot-bubble');
+    const window_ = document.getElementById('chatbot-window');
+    const closeBtn = document.getElementById('chatbot-close');
+    const input = document.getElementById('chatbot-input');
+    const sendBtn = document.getElementById('chatbot-send');
+    const messages = document.getElementById('chatbot-messages');
+
+    if (!bubble || !window_ || !messages) return;
+
+    // Show greeting
+    appendChatMsg(messages, 'bot', '👋 Hi! Ask me anything about this page or its owner.');
+
+    bubble.addEventListener('click', () => {
+        const isOpen = window_.style.display !== 'none';
+        window_.style.display = isOpen ? 'none' : 'flex';
+        if (!isOpen) input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        window_.style.display = 'none';
+    });
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        appendChatMsg(messages, 'user', text);
+
+        const typingEl = appendChatMsg(messages, 'bot typing', '⏳ Thinking...');
+        sendBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+            typingEl.remove();
+            appendChatMsg(messages, 'bot', data.reply || 'Sorry, no response.');
+        } catch (e) {
+            typingEl.remove();
+            appendChatMsg(messages, 'bot', '⚠️ Could not reach server.');
+        }
+
+        sendBtn.disabled = false;
+        input.focus();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+}
+
+function appendChatMsg(container, type, text) {
+    const el = document.createElement('div');
+    el.className = `chat-msg ${type}`;
+    el.textContent = text;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    return el;
+}
+
+// ===== SNAKE GAME =====
+function initSnakeGame() {
+    const gameBtn = document.getElementById('game-btn');
+    const gameModal = document.getElementById('game-modal');
+    const gameClose = document.getElementById('game-close');
+    const canvas = document.getElementById('game-canvas');
+    const overlay = document.getElementById('game-overlay');
+    const overlayText = document.getElementById('game-overlay-text');
+    const restartBtn = document.getElementById('game-restart-btn');
+    const scoreEl = document.getElementById('game-score');
+    const bestEl = document.getElementById('game-best');
+
+    if (!gameBtn || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const GRID = 15;
+    const COLS = canvas.width / GRID;
+    const ROWS = canvas.height / GRID;
+    let snake, dir, nextDir, food, score, bestScore, gameLoop, running;
+
+    bestScore = parseInt(localStorage.getItem('snakeBest') || '0');
+    bestEl.textContent = bestScore;
+
+    function resetGame() {
+        snake = [{ x: 10, y: 10 }];
+        dir = { x: 1, y: 0 };
+        nextDir = { x: 1, y: 0 };
+        score = 0;
+        scoreEl.textContent = 0;
+        placeFood();
+        running = false;
+        overlay.style.display = 'flex';
+        overlayText.textContent = 'Press any arrow key to start!';
+        restartBtn.style.display = 'none';
+        drawFrame();
+    }
+
+    function placeFood() {
+        do {
+            food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+        } while (snake.some(s => s.x === food.x && s.y === food.y));
+    }
+
+    function drawFrame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw food
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.roundRect(food.x * GRID + 2, food.y * GRID + 2, GRID - 4, GRID - 4, 4);
+        ctx.fill();
+
+        // Draw snake
+        snake.forEach((seg, i) => {
+            const alpha = i === 0 ? 1 : 0.75 - (i / snake.length) * 0.4;
+            ctx.fillStyle = `rgba(99, 179, 237, ${alpha})`;
+            ctx.beginPath();
+            ctx.roundRect(seg.x * GRID + 1, seg.y * GRID + 1, GRID - 2, GRID - 2, i === 0 ? 5 : 3);
+            ctx.fill();
+        });
+    }
+
+    function tick() {
+        dir = nextDir;
+        const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+        // Wall collision
+        if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return gameOver();
+        // Self collision
+        if (snake.some(s => s.x === head.x && s.y === head.y)) return gameOver();
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+            score++;
+            scoreEl.textContent = score;
+            if (score > bestScore) {
+                bestScore = score;
+                bestEl.textContent = bestScore;
+                localStorage.setItem('snakeBest', bestScore);
+            }
+            placeFood();
+        } else {
+            snake.pop();
+        }
+
+        drawFrame();
+    }
+
+    function gameOver() {
+        clearInterval(gameLoop);
+        running = false;
+        overlay.style.display = 'flex';
+        overlayText.textContent = `💀 Game Over! Score: ${score}`;
+        restartBtn.style.display = 'block';
+    }
+
+    function startGame() {
+        if (running) return;
+        running = true;
+        overlay.style.display = 'none';
+        gameLoop = setInterval(tick, 120);
+    }
+
+    // Controls
+    const keyMap = {
+        ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }
+    };
+
+    document.addEventListener('keydown', e => {
+        if (!gameModal || gameModal.style.display === 'none') return;
+        const newDir = keyMap[e.key];
+        if (!newDir) return;
+        e.preventDefault();
+        // Prevent reversing
+        if (newDir.x === -dir.x && newDir.y === -dir.y) return;
+        nextDir = newDir;
+        if (!running) startGame();
+    });
+
+    // Open game
+    gameBtn.addEventListener('click', () => {
+        gameModal.style.display = 'block';
+        resetGame();
+    });
+
+    // Close game
+    gameClose.addEventListener('click', () => {
+        clearInterval(gameLoop);
+        running = false;
+        gameModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', e => {
+        if (e.target === gameModal) {
+            clearInterval(gameLoop);
+            running = false;
+            gameModal.style.display = 'none';
+        }
+    });
+
+    restartBtn.addEventListener('click', resetGame);
+}

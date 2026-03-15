@@ -97,6 +97,14 @@
         </div>
 
 
+        <!-- Anime Watchlist Section -->
+        <section id="anime-section" style="display:none; margin-bottom: 30px;">
+            <h2 class="section-title">🎌 Anime Watchlist</h2>
+            <div id="anime-list" class="anime-grid">
+                <!-- Anime cards injected here -->
+            </div>
+        </section>
+
         <section class="contact-section">
             <h2>Contact Me</h2>
             <form id="contact-form" class="contact-form">
@@ -133,6 +141,11 @@
 
         <!-- Visitor Counter -->
         <div id="visitor-counter" class="visitor-counter"></div>
+
+        <!-- Mini Game Launch Button -->
+        <div id="game-launcher" style="display:none; text-align:center; margin: 16px 0;">
+            <button id="game-btn" class="game-btn"><span>🎮</span> Play Snake</button>
+        </div>
     </main>
 
     <!-- QR Code Modal -->
@@ -141,6 +154,41 @@
             <span class="close" id="qr-close">&times;</span>
             <h2>Scan to Connect</h2>
             <div id="qrcode" style="margin: 20px auto; display: flex; justify-content: center;"></div>
+        </div>
+    </div>
+
+    <!-- Snake Game Modal -->
+    <div id="game-modal" class="modal" style="display:none;">
+        <div class="modal-content game-modal-content">
+            <span class="close" id="game-close">&times;</span>
+            <h2>🐍 Snake</h2>
+            <div class="game-score-bar">
+                <span>Score: <strong id="game-score">0</strong></span>
+                <span>Best: <strong id="game-best">0</strong></span>
+            </div>
+            <canvas id="game-canvas" width="300" height="300"></canvas>
+            <div id="game-overlay" class="game-overlay">
+                <p id="game-overlay-text">Press any arrow key to start!</p>
+                <button id="game-restart-btn" class="game-btn" style="display:none;">▶ Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot Widget -->
+    <div id="chatbot-widget" style="display:none;">
+        <button id="chatbot-bubble" class="chatbot-bubble" title="Chat with AI">
+            <span id="chatbot-bubble-icon">💬</span>
+        </button>
+        <div id="chatbot-window" class="chatbot-window" style="display:none;">
+            <div class="chatbot-header">
+                <span id="chatbot-name">Assistant</span>
+                <button id="chatbot-close" class="chatbot-close-btn">✕</button>
+            </div>
+            <div id="chatbot-messages" class="chatbot-messages"></div>
+            <div class="chatbot-input-row">
+                <input type="text" id="chatbot-input" placeholder="Ask me anything..." autocomplete="off">
+                <button id="chatbot-send"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
         </div>
     </div>
 

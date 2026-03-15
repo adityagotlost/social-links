@@ -45,6 +45,8 @@
             <button class="tab-btn" data-target="messages-tab">Messages</button>
             <button class="tab-btn" data-target="subscribers-tab">Subscribers</button>
             <button class="tab-btn" data-target="gallery-tab">Gallery</button>
+            <button class="tab-btn" data-target="anime-tab">🎌 Anime</button>
+            <button class="tab-btn" data-target="chatbot-tab">🤖 Chatbot</button>
             <button class="tab-btn" data-target="vcard-tab">vCard</button>
             <button class="tab-btn" data-target="settings-tab">Settings</button>
         </div>
@@ -349,6 +351,54 @@
             </form>
         </div>
 
+        <!-- Anime Watchlist Tab -->
+        <div id="anime-tab" class="tab-content">
+            <div class="section-header">
+                <h2>🎌 Anime Watchlist</h2>
+                <button class="btn btn-primary" onclick="openAnimeModal()">Add Anime</button>
+            </div>
+            <p style="color:var(--text-secondary); margin-bottom:16px; font-size:0.88rem;">Manage your anime watchlist. Enable it in Settings → <em>Anime Section Active</em>.</p>
+            <div class="table-container">
+                <table id="anime-table">
+                    <thead>
+                        <tr>
+                            <th>Cover</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="anime-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chatbot Tab -->
+        <div id="chatbot-tab" class="tab-content">
+            <h2>🤖 AI Chatbot Settings</h2>
+            <p style="color:var(--text-secondary); margin-bottom:20px; font-size:0.88rem;">Configure your Gemini-powered chat widget. Enable it to show the chat bubble on your public page.</p>
+            <form id="chatbot-settings-form" class="settings-form">
+                <div class="form-group row-group">
+                    <label>Enable Chatbot Widget</label>
+                    <select id="setting-chatbot_active">
+                        <option value="false">No (Hidden)</option>
+                        <option value="true">Yes (Visible)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bot Name (shown in chat header)</label>
+                    <input type="text" id="setting-chatbot_name" placeholder="e.g. Adi's Assistant">
+                </div>
+                <div class="form-group">
+                    <label>Bot Persona / System Prompt</label>
+                    <textarea id="setting-chatbot_persona" rows="5" placeholder="You are a friendly assistant..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:16px;">Save Chatbot Settings</button>
+                <div id="chatbot-save-msg" class="success-msg" style="display:none; text-align:center; margin-top:10px;">Saved!</div>
+            </form>
+        </div>
+
     </div>
 
     <!-- Add/Edit Link Modal -->
@@ -433,6 +483,39 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="margin-top:20px; width:100%;">Save Image</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Anime Add/Edit Modal -->
+    <div id="anime-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAnimeModal()">&times;</span>
+            <h2 id="anime-modal-title">Add Anime</h2>
+            <form id="anime-form">
+                <input type="hidden" id="anime-id">
+                <div class="form-group">
+                    <label>Anime Title</label>
+                    <input type="text" id="anime-title" placeholder="e.g. Attack on Titan" required>
+                </div>
+                <div class="form-group">
+                    <label>Cover Image URL (leave blank to auto-fetch from MAL)</label>
+                    <input type="text" id="anime-image-url" placeholder="https://... or leave blank to auto-search">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="anime-status">
+                        <option value="watching">Watching</option>
+                        <option value="completed">Completed</option>
+                        <option value="plan_to_watch">Plan to Watch</option>
+                        <option value="dropped">Dropped</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Score (1-10, 0 = unrated)</label>
+                    <input type="number" id="anime-score" min="0" max="10" value="0">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:16px; width:100%;">Save Anime</button>
             </form>
         </div>
     </div>

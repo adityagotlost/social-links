@@ -921,3 +921,295 @@ body.light-mode .theme-toggle {
     opacity: 1;
     background: rgba(255,255,255,0.2);
 }
+
+/* ===== SECTION TITLE ===== */
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+/* ===== ANIME WATCHLIST ===== */
+.anime-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+}
+
+.anime-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+    position: relative;
+}
+
+.anime-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+
+.anime-card img {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+}
+
+.anime-card-body {
+    padding: 8px 10px;
+}
+
+.anime-card-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 5px;
+}
+
+.anime-status-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.anime-status-badge.watching { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.4); }
+.anime-status-badge.completed { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+.anime-status-badge.plan_to_watch { background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); }
+.anime-status-badge.dropped { background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+
+.anime-score {
+    font-size: 0.7rem;
+    color: #fbbf24;
+    margin-top: 3px;
+}
+
+/* ===== AI CHATBOT ===== */
+#chatbot-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.chatbot-bubble {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4361ee, #7c3aed);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(67,97,238,0.45);
+    transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.4, 1), box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chatbot-bubble:hover {
+    transform: scale(1.12);
+    box-shadow: 0 6px 24px rgba(67,97,238,0.6);
+}
+
+.chatbot-window {
+    width: 310px;
+    background: rgba(13,17,23,0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    animation: chatSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    max-height: 420px;
+}
+
+@keyframes chatSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.chatbot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #4361ee, #7c3aed);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: white;
+}
+
+.chatbot-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.chatbot-close-btn:hover { opacity: 1; }
+
+.chatbot-messages {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    min-height: 200px;
+    max-height: 270px;
+}
+
+.chat-msg {
+    max-width: 80%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    animation: msgPop 0.25s ease;
+}
+
+@keyframes msgPop {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.chat-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #4361ee, #7c3aed);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-msg.bot {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.07);
+    color: var(--text-primary);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-bottom-left-radius: 4px;
+}
+
+.chat-msg.typing { opacity: 0.6; font-style: italic; }
+
+.chatbot-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.chatbot-input-row input {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chatbot-input-row input:focus {
+    border-color: #4361ee;
+}
+
+.chatbot-input-row button {
+    background: linear-gradient(135deg, #4361ee, #7c3aed);
+    border: none;
+    color: white;
+    border-radius: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.chatbot-input-row button:hover {
+    opacity: 0.85;
+    transform: scale(1.05);
+}
+
+/* ===== SNAKE GAME ===== */
+.game-btn {
+    background: linear-gradient(135deg, #4361ee, #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.4, 1), box-shadow 0.3s ease;
+    box-shadow: 0 4px 18px rgba(67,97,238,0.4);
+    letter-spacing: 0.3px;
+}
+
+.game-btn:hover {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 8px 24px rgba(67,97,238,0.5);
+}
+
+.game-modal-content {
+    max-width: 360px;
+    position: relative;
+    text-align: center;
+}
+
+.game-score-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+#game-canvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
+    background: #0a0a0f;
+    border: 2px solid rgba(67,97,238,0.35);
+    box-shadow: 0 0 30px rgba(67,97,238,0.15);
+}
+
+.game-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(4px);
+    gap: 16px;
+}
+
+#game-overlay-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
